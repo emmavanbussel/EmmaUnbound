@@ -16,9 +16,9 @@ Emma has no neck, arms or legs: her head, hands and feet float freely.
 
 Collect orbs, stomp or punch the enemies, and reach the golden star. Flags are checkpoints and refill your hearts.
 
-**Level 1, Heidestein.** Heath and pine forest: purple heather, pines, wolves, a schaapskooi with sheep, mushrooms to bounce on and a drifting cloud.
+**Level 1, Heidestein.** Heath and pine forest: purple heather, pines, sandy plains with fallen logs, two misty lakes with reeds and birches, roe deer, wolves, a schaapskooi with sheep, mushrooms to bounce on and a drifting cloud.
 
-**Level 2, Viñales.** A climb up and to the right over red earth, past tobacco fields and drying sheds, with mogotes behind. Punch the guava hanging over the river so it drops in, then ride it across (Emma cannot swim). After that: lianas to climb, flying guavas to ride, a conga drum to bounce on, crabs and beetles.
+**Level 2, Viñales.** Dusk over red-brown earth, with mogotes behind. A village with cottages, power lines and the old yellow bus, a tobacco shed and field, then a broken plank bridge over the muddy river (Emma cannot swim). After that the level climbs up and to the right: lianas to climb, plank platforms on ropes to ride, a drum to bounce on, crabs and beetles.
 
 **Level 3, Lofoten.** Icy islands under the northern lights. The ground is slippery and the slopes pull you downhill. Curved bridges and a fishing boat link the islands; falling in the sea sends you back to the checkpoint. Polar bears need two hits and get faster after the first.
 
@@ -52,7 +52,7 @@ The page has to be served over HTTP; opening `docs/index.html` straight from dis
 | `src/main.cpp` | Main loop (fixed 120 Hz physics step) and keyboard / touch input |
 | `src/game.hpp`, `src/game.cpp` | Game rules: player physics, slopes, bridges, lianas, platforms, water, fist, enemies, pickups, camera. Tuning constants are at the top of `game.hpp` |
 | `src/world.cpp` | Sky, background scenery, terrain and level scenery, with the colours for each level's theme |
-| `src/actors.cpp` | Emma, enemies, platforms (cloud, guava, boat), lianas and pickups |
+| `src/actors.cpp` | Emma, enemies, platforms (cloud, rope platform, boat), lianas and pickups |
 | `src/render.cpp`, `src/draw.hpp` | Frame assembly, HUD, and shared drawing declarations |
 | `src/gfx.hpp`, `src/gfx.cpp` | Thin C++ wrapper around the browser's Canvas 2D API |
 | `src/level.hpp` | The three levels as ASCII maps (legend at the top of the file) |

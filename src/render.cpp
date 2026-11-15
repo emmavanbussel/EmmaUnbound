@@ -67,6 +67,7 @@ void render(const Game& g) {
     g_begin();
     float t = g.time;
     drawBackground(g);
+    drawFog(g, false);
 
     float shx = 0, shy = 0;
     if (g.shake > 0) { shx = std::sin(t * 90) * g.shake * 18; shy = std::cos(t * 70) * g.shake * 14; }
@@ -79,6 +80,7 @@ void render(const Game& g) {
         return x > g.camX - margin && x < g.camX + VIEW_W + margin && y > g.camY - margin && y < g.camY + VIEW_H + 2.5f * margin;
     };
 
+    drawWires(g);
     for (auto& d : g.decor) if (visible(d.x, d.y, 200)) drawDecor(g, d);
     for (auto& c : g.checkpoints) if (visible(c.x, c.y)) drawCheckpoint(c, t);
     if (visible(g.goalX, g.goalY)) drawGoal(g);
@@ -104,5 +106,6 @@ void render(const Game& g) {
     g_alpha(1);
     g_restore();
 
+    drawFog(g, true);
     drawHud(g);
 }

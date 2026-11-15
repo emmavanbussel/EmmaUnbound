@@ -24,6 +24,8 @@ void heartPath(float cx, float cy, float s);
 
 // world.cpp: sky, parallax scenery, terrain, level scenery
 void drawBackground(const Game& g);
+void drawFog(const Game& g, bool front);
+void drawWires(const Game& g);
 void drawDecor(const Game& g, const Decor& d);
 void drawTerrain(const Game& g, int tx0, int tx1, int ty0, int ty1);
 void drawPlanks(const Game& g, int tx0, int tx1, int ty0, int ty1);

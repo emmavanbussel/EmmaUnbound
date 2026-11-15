@@ -50,12 +50,7 @@ struct Enemy { int type; float x, y, vx, x0, y0, t; bool alive; int hp; float hi
 struct Orb { float x, y, phase; bool taken; };
 struct Bouncer { float x, y, bounceT; };
 // A platform you can ride. It glides back and forth between (ax,ay) and (bx,by); x,y is its top centre.
-struct Mover {
-    float ax, ay, bx, by, w, x, y, prevX, prevY, phase;
-    // A raft is a fruit hanging over water: 1 hanging, 2 falling after a punch, 3 floating (drifts while you ride it).
-    int raft = 0;
-    float homeX = 0, hangY = 0, floatY = 0, endX = 0, vy = 0;
-};
+struct Mover { float ax, ay, bx, by, w, x, y, prevX, prevY, phase; };
 // A curved walkway between x0 and x1. arch > 0 humps upwards, arch < 0 sags like a rope bridge.
 struct Bridge { float x0, x1, y, arch; };
 inline float bridgeY(const Bridge& b, float x) {
@@ -87,6 +82,7 @@ struct Game {
     std::vector<Bridge> bridges;
     std::vector<Checkpoint> checkpoints;
     std::vector<Decor> decor;
+    std::vector<float> fogs;  // x positions that fog gathers around
     std::vector<Particle> particles;
     float spawnX = 0, spawnY = 0, goalX = 0, goalY = 0;
     float camX = 0, camY = 0, lookAhead = 0, shake = 0;
@@ -99,6 +95,7 @@ struct Game {
 
     char at(int tx, int ty) const;
     bool solid(int tx, int ty) const;
+    float fogAt(float x) const;         // 0..1, how foggy it is at this x
     bool filled(int tx, int ty) const;  // solid ground or a slope
     const char* hint() const;           // a tip for where the player is right now, or nullptr
 

@@ -41,8 +41,8 @@ void drawBouncer(const Game& g, const Bouncer& m) {
         g_circle(-13, -28, 5, FILL); g_circle(4, -34, 6, FILL); g_circle(17, -24, 4, FILL);
     } else {  // conga drum
         g_path(); g_move(-21, -37); g_line(21, -37); g_quad(27, -18, 17, 2); g_line(-17, 2); g_quad(-27, -18, -21, -37); g_close();
-        g_lin(-24, 0, 24, 0, 0xff9a3d, 0xd24a1f); g_paint(BOTH);
-        g_stroke(0xffe08a, 4);
+        g_lin(-24, 0, 24, 0, 0xc0783e, 0x8a4a26); g_paint(BOTH);
+        g_stroke(0xdcc28c, 4);
         g_path(); g_move(-23, -25); g_quad(0, -20, 23, -25); g_move(-21, -8); g_quad(0, -3, 21, -8); g_paint(STROKE);
         g_stroke(INK, 1.6);
         g_path(); g_move(-23, -27.5); g_quad(0, -22.5, 23, -27.5); g_move(-22, -22.5); g_quad(0, -17.5, 22, -22.5);
@@ -74,50 +74,48 @@ static void drawCloudPlatform(const Mover& m, float t) {
     g_restore();
 }
 
-// A big guava you can ride. Flying ones flap two leaves like wings; the raft hangs from its tree until
-// it is punched loose, then floats in the river.
-static void drawGuava(const Mover& m, float t, int index) {
+// Vinales: a plank platform slung on ropes from a bamboo frame. Lifts run between two masts; the ferry
+// hangs from a cable strung between them.
+static void drawRopePlatform(const Mover& m, int index) {
+    bool lift = std::fabs(m.ax - m.bx) < 1;
     float hw = m.w / 2;
-    bool ripe = index % 2 == 0;
-    g_save(); g_translate(m.x, m.y);
-    if (m.raft == 1 || m.raft == 2) {  // stem up to the branch
-        float branch = m.floatY - 150 - m.y;
-        if (m.raft == 1) {
-            g_stroke(INK, 6); g_path(); g_move(0, branch); g_line(0, 2); g_paint(STROKE);
-            g_stroke(0x8a5a36, 3); g_paint(STROKE);
+    auto bamboo = [](float x0, float y0, float x1, float y1) {
+        g_path(); g_move(x0, y0); g_line(x1, y1);
+        g_stroke(INK, 11); g_paint(STROKE); g_stroke(0xa99a62, 6.5); g_paint(STROKE); g_stroke(0xcbbd86, 1.6); g_paint(STROKE);
+        g_stroke(0x6f6238, 2);
+        float len = std::hypot(x1 - x0, y1 - y0);
+        for (float d = 30; d < len - 10; d += 44) {
+            float k = d / len, px = x0 + (x1 - x0) * k, py = y0 + (y1 - y0) * k;
+            g_path();
+            if (std::fabs(x1 - x0) < std::fabs(y1 - y0)) { g_move(px - 3.2f, py); g_line(px + 3.2f, py); } else { g_move(px, py - 3.2f); g_line(px, py + 3.2f); }
+            g_paint(STROKE);
         }
-        g_save(); g_translate(4, 0); g_rotate(-0.5f + std::sin(t * 3) * 0.08f);
-        g_path(); g_move(0, 0); g_quad(16, -18, 36, -8); g_quad(18, 6, 0, 0); g_close();
-        g_fill(0x62d86f); g_stroke(INK, 3); g_paint(BOTH);
-        g_restore();
-    } else if (!m.raft) {
-        float flap = std::sin(t * 11 + index * 2) * 0.4f;
-        for (int side = -1; side <= 1; side += 2) {
-            g_save(); g_translate(side * (hw - 10), 12); g_scale(side, 1); g_rotate(-0.55f + flap);
-            g_path(); g_move(0, 0); g_quad(20, -20, 44, -6); g_quad(22, 10, 0, 0); g_close();
-            g_fill(0x62d86f); g_stroke(INK, 3); g_paint(BOTH);
-            g_stroke(0x2f9a4a, 2); g_path(); g_move(4, -1); g_line(34, -6); g_paint(STROKE);
-            g_restore();
-        }
+    };
+    auto rope = [](float x0, float y0, float x1, float y1) {
+        g_path(); g_move(x0, y0); g_line(x1, y1);
+        g_stroke(INK, 4.5); g_paint(STROKE); g_stroke(0xcdb98a, 2); g_paint(STROKE);
+    };
+    float topY = std::min(m.ay, m.by) - 118;
+    if (lift) {
+        float l = m.ax - hw - 20, r = m.ax + hw + 20, bottom = std::max(m.ay, m.by) + 620;
+        bamboo(l, topY - 14, l, bottom); bamboo(r, topY - 14, r, bottom);
+        bamboo(l - 14, topY, r + 14, topY);
+        rope(m.x - hw + 12, topY + 4, m.x - hw + 12, m.y + 4); rope(m.x + hw - 12, topY + 4, m.x + hw - 12, m.y + 4);
+    } else {
+        float l = std::min(m.ax, m.bx) - hw - 26, r = std::max(m.ax, m.bx) + hw + 26, bottom = m.ay + 620;
+        bamboo(l, topY - 14, l, bottom); bamboo(r, topY - 14, r, bottom);
+        rope(l, topY, r, topY);
+        rope(m.x, topY + 4, m.x - hw + 12, m.y + 4); rope(m.x, topY + 4, m.x + hw - 12, m.y + 4);
+        g_fill(0x6e625a); g_stroke(INK, 2.5); g_circle(m.x, topY, 6.5, BOTH);
     }
-    // body: yellow-green skin, a little wider at the bottom
-    if (ripe) g_lin(0, 0, 0, 62, 0xf6f590, 0xb4d84f); else g_lin(0, 0, 0, 62, 0xdff07c, 0x86c240);
-    g_stroke(INK, 3.5);
-    g_path(); g_move(-hw + 10, 6);
-    g_quad(-hw + 15, -1, -hw + 32, -1); g_line(hw - 32, -1); g_quad(hw - 15, -1, hw - 10, 6);
-    g_cubic(hw + 9, 28, hw - 8, 62, 0, 62);
-    g_cubic(-hw + 8, 62, -hw - 9, 28, -hw + 10, 6);
-    g_close(); g_paint(BOTH);
-    g_alpha(0.55); g_fill(0xffffff); g_ellipse(-hw * 0.45f, 13, 13, 6, -0.35, FILL);
-    g_alpha(0.5); g_fill(0x8fb53c);  // freckles
-    static const float dots[][2] = {{-30, 30}, {-36, 44}, {31, 26}, {36, 42}, {-16, 52}, {20, 53}, {0, 12}, {28, 12}};
-    for (auto& d : dots) g_circle(d[0], d[1], 1.8, FILL);
-    g_alpha(0.5); g_fill(0xff9db5); g_circle(-21, 37, 6, FILL); g_circle(21, 37, 6, FILL);
-    g_alpha(1);
-    g_fill(INK); g_ellipse(-9, 28, 2.8, 4, 0, FILL); g_ellipse(9, 28, 2.8, 4, 0, FILL);
-    g_stroke(INK, 2.5); g_path(); g_move(-6, 38); g_quad(0, 44, 6, 38); g_paint(STROKE);
-    // the little crown at the bottom of every guava
-    g_fill(0x6b5a2e); g_stroke(INK, 2); starPath(0, 61, 7.5, 3.2, PI, 5); g_paint(BOTH);
+    // the deck: weathered planks on two cross beams
+    g_save(); g_translate(m.x, m.y);
+    g_stroke(INK, 3); g_fill(0x6b5744);
+    g_rrect(-hw + 14, 9, 12, 13, 3, BOTH); g_rrect(hw - 26, 9, 12, 13, 3, BOTH);
+    g_lin(0, 0, 0, 14, 0xb09a7c, 0x86705a); g_stroke(INK, 3.5); g_rrect(-hw, 0, m.w, 14, 4, BOTH);
+    g_stroke(0xd3c2a0, 2.2); g_path(); g_move(-hw + 7, 4); g_line(hw - 7, 4); g_paint(STROKE);
+    g_stroke(0x5c4c3a, 2);
+    for (float x = -hw + 20 + (index % 3) * 3; x < hw - 10; x += 21) { g_path(); g_move(x, 2.5); g_line(x, 11.5); g_paint(STROKE); }
     g_restore();
 }
 
@@ -150,7 +148,7 @@ void drawFishingBoat(float x, float y, float scale, bool cabin) {
 
 void drawMover(const Game& g, const Mover& m, int index) {
     if (g.level == 0) drawCloudPlatform(m, g.time);
-    else if (g.level == 1) drawGuava(m, g.time, index);
+    else if (g.level == 1) drawRopePlatform(m, index);
     else drawFishingBoat(m.x, m.y, 1, true);
 }
 
@@ -399,7 +397,7 @@ void drawFist(const Game& g) {
 void drawEmma(const Game& g) {
     const Player& p = g.p;
     float t = g.time;
-    const int HAIR = 0xff4f7b, HAIR_LIGHT = 0xff86a6, SKIN = 0xffdcb8, TUNIC = 0x1ec8b6, TUNIC_DARK = 0x129c94;
+    const int HAIR = 0xb98a5a, HAIR_LIGHT = 0xd6ae80, SKIN = 0xffdcb8, TUNIC = 0x1ec8b6, TUNIC_DARK = 0x129c94;
     const int SHOE = 0xffb21f, SCARF = 0xffd447;
 
     float alpha = 1;
