@@ -150,14 +150,14 @@ void drawTahoto() {  // the two-storeyed pagoda of Koyasan: square below, a whit
 
 void drawCastle() {  // Himeji: the white heron castle
     g_stroke(INK, 3);
-    g_path(); g_move(-158, 3); g_quad(-134, -40, -124, -76); g_line(124, -76); g_quad(134, -40, 158, 3); g_close();
+    g_path(); g_move(-170, 3); g_quad(-146, -40, -136, -76); g_line(136, -76); g_quad(146, -40, 170, 3); g_close();
     g_lin(0, -76, 0, 0, 0xb9b5aa, 0x8f8b82); g_paint(BOTH);
     g_stroke(0x77736a, 1.6);
-    for (int r = 0; r < 4; r++) for (float sx = -130 + (r % 2) * 16; sx < 130; sx += 34) { g_path(); g_move(sx, -64 + r * 17); g_line(sx + 18, -64 + r * 17); g_paint(STROKE); }
+    for (int r = 0; r < 4; r++) for (float sx = -138 + (r % 2) * 16; sx < 130; sx += 34) { g_path(); g_move(sx, -64 + r * 17); g_line(sx + 18, -64 + r * 17); g_paint(STROKE); }
     // a smaller tower beside the keep
-    g_stroke(INK, 3); g_fill(PLASTER); g_rrect(-150, -124, 52, 50, 1, BOTH);
-    g_fill(0x3a3f4a); g_rect(-138, -108, 7, 10); g_rect(-121, -108, 7, 10);
-    roof(-124, -120, 40, 24, 12);
+    g_stroke(INK, 3); g_fill(PLASTER); g_rrect(-122, -124, 52, 50, 1, BOTH);
+    g_fill(0x3a3f4a); g_rect(-112, -108, 7, 10);
+    roof(-98, -120, 38, 24, 12);
     float y = -76;
     for (int i = 0; i < 4; i++) {
         float w = 100 - i * 22, h = i == 3 ? 34 : 40;
@@ -317,6 +317,43 @@ void drawMaple(float t, uint32_t h) {
 
 }  // namespace
 
+// Koyasan: the monk who looks after the rock garden. He rakes quietly, and turns to wave Emma off
+// when she comes near the gravel.
+void drawMonk(const Game& g, const Decor& d) {
+    float t = g.time;
+    bool warn = std::fabs(g.p.x - d.x) < 520 && g.p.x > d.x - 60, onGravel = g.p.invuln > 0.9f && warn;
+    float dir = g.p.x < d.x - 30 ? -1.f : 1.f;
+    g_scale(dir, 1);
+    g_stroke(INK, 3);
+    // rake (held still while he warns)
+    float sweep = warn ? 0 : std::sin(t * 2.2f) * 7;
+    g_path(); g_move(-6, -44); g_line(30 + sweep, -2);
+    g_stroke(INK, 6); g_paint(STROKE); g_stroke(0xc9a878, 2.6); g_paint(STROKE);
+    g_stroke(INK, 3); g_fill(0xc9a878); g_rrect(20 + sweep, -5, 22, 6, 2, BOTH);
+    // robe: saffron under a dark outer robe
+    g_fill(0xfaf3e3); g_ellipse(-7, -3, 8, 4.5, 0, BOTH); g_ellipse(7, -3, 8, 4.5, 0, BOTH);
+    g_path(); g_move(-13, -62); g_quad(0, -68, 13, -62); g_quad(21, -30, 19, -6); g_quad(0, -1, -19, -6); g_quad(-21, -30, -13, -62); g_close();
+    g_lin(0, -66, 0, -4, 0xf2a03a, 0xcf7a1f); g_paint(BOTH);
+    g_fill(0x5a4636); g_path(); g_move(-13, -62); g_quad(-2, -66, 6, -63); g_quad(-8, -36, -19, -8); g_quad(-21, -32, -13, -62); g_close(); g_paint(BOTH);
+    // head
+    g_fill(0xf2cfa6); g_circle(1, -79, 13, BOTH);
+    g_fill(INK); g_circle(5, -80, 1.6f, FILL); g_circle(11, -80, 1.5f, FILL);
+    g_stroke(INK, 1.8); g_path();
+    if (onGravel) { g_move(2, -85); g_line(8, -83.5f); g_move(13, -85); g_line(9, -83.5f); g_move(5, -72); g_quad(8, -74, 11, -72); }
+    else { g_move(5, -73); g_quad(8, -70.5f, 11, -73); }
+    g_paint(STROKE);
+    // hands: one on the rake, the other raised when warning
+    g_stroke(INK, 2.5); g_fill(0xf2cfa6); g_circle(-5, -44, 5, BOTH);
+    if (warn) g_circle(18, -58 + std::sin(t * 9) * 3, 5.5f, BOTH); else g_circle(8, -36, 5, BOTH);
+    if (warn) {  // speech bubble
+        g_scale(dir, 1);
+        g_fill(0xffffff); g_stroke(INK, 2.5); g_rrect(-24, -128, 48, 28, 10, BOTH);
+        g_path(); g_move(-4, -101); g_line(dir * 4, -93); g_line(6, -101); g_paint(BOTH);
+        g_fill(0xffffff); g_rect(-5, -104, 12, 4);
+        g_text(onGravel ? "!!" : "!", 0, -106, 22, 1, 0xd9483b, INK, 0);
+    }
+}
+
 bool drawJapanDecor(const Game& g, const Decor& d) {
     uint32_t h = hash2(int(d.x), int(d.y));
     float t = g.time;
@@ -334,6 +371,7 @@ bool drawJapanDecor(const Game& g, const Decor& d) {
         case 'L': drawStoneLantern(); break;
         case 'K': drawCedar(h); break;
         case 'q': drawRock(h); break;
+        case 'X': drawMonk(g, d); break;
         case 'g':  // a gate with a second one just behind it, so a row of them reads as a tunnel
             g_save(); g_translate(22, 0); drawTorii(0.93f, 0xd9481f, 0xa83418, false); g_restore();
             drawTorii(1, VERMILION, VERMILION_D, true);
@@ -515,9 +553,9 @@ void drawJapanBackground(const Game& g) {
 
     // the Shinkansen line: a viaduct with a train passing every so often
     {
-        float o2 = g.camX * 0.3f, y = 428 + midUp * 1.2f;
+        float o2 = g.camX * 0.3f, y = 316 + midUp * 1.2f;  // high enough to clear the sea in the foreground
         g_fill(mix(0xaab2bd, 0x8f8fa8, dusk));
-        for (int k = int(std::floor(o2 / 110)) - 1; k <= int((o2 + VIEW_W) / 110) + 1; k++) g_rect(k * 110.f - o2 - 5, y, 10, 70);
+        for (int k = int(std::floor(o2 / 110)) - 1; k <= int((o2 + VIEW_W) / 110) + 1; k++) g_rect(k * 110.f - o2 - 5, y, 10, VIEW_H - y);
         g_rect(0, y - 2, VIEW_W, 9);
         g_stroke(mix(0x8a929d, 0x77778f, dusk), 1.4);
         for (int k = int(std::floor(o2 / 160)) - 1; k <= int((o2 + VIEW_W) / 160) + 1; k++) { float px = k * 160.f - o2; g_path(); g_move(px, y - 2); g_line(px, y - 44); g_line(px + 14, y - 44); g_paint(STROKE); }

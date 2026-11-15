@@ -46,7 +46,7 @@ void Game::load(int levelIndex) {
     static const float moverWidths[] = {150.f, 110.f, 150.f, 150.f};  // floating pine, rope platform, fishing boat, wooden boat
     float moverW = moverWidths[level];
     int walkerHp = level == 2 ? 2 : 1;                         // polar bears take two hits
-    float walkerSpeed = level == 2 ? 50.f : 60.f;
+    float walkerSpeed = level == 2 ? 50.f : (level == 3 ? 78.f : 60.f);  // boars trot faster than wolves
     for (int ty = 0; ty < H; ty++) {
         for (int tx = 0; tx < W; tx++) {
             char& c = tiles[ty][tx];
@@ -61,7 +61,7 @@ void Game::load(int levelIndex) {
                 case 'C': checkpoints.push_back({cx, bottom, false}); break;
                 case 'T': case 'S': case 'b': case 'H': case 't': case 'R': case 'D': case 'l': case 'd':
                 case 'k': case 'c': case 'j': case 'p': case 'U': case 'x': case 'h':
-                case 'g': case 'm': case 'a': case 'y': case 'J': case 'L': case 'K': case 'q': case 'W': case 'V':
+                case 'g': case 'm': case 'a': case 'y': case 'J': case 'L': case 'K': case 'q': case 'W': case 'V': case 'X':
                     decor.push_back({c, cx, bottom}); break;
                 case 'B': case 'r': case 'O': decor.push_back({c, cx, bottom}); c = 'w'; continue;  // these sit in water
                 case 'f': fogs.push_back(cx); break;
@@ -325,6 +325,9 @@ void Game::stepPlayer(const Input& in, float dt) {
                 if (at(tx, ty) == '^' && p.y > (ty + 1) * TILE - 28) hurt(p.x + p.dir * 10);
     }
 
+    // Japan: the raked gravel of the rock garden is not for walking on
+    if (level == 3 && p.grounded && at(int(std::floor(p.x / TILE)), int(std::floor(p.y / TILE))) == ',') hurt(p.x + p.dir * 10);
+
     // water: Emma cannot swim
     {
         int tx = int(std::floor(p.x / TILE)), ty = int(std::floor((p.y - 6) / TILE));
@@ -508,11 +511,16 @@ const char* Game::hint() const {
     for (const Liana& l : lianas)
         if (std::fabs(l.x - p.x) < 260 && p.y > l.y0 && p.y < l.y1 + 140)
             return level == 3 ? "Jump onto a strand of lights to grab it" : "Jump onto the liana to grab it";
+    if (level == 3) {
+        for (const Decor& d : decor)
+            if (d.kind == 'X' && p.x > d.x - 330 && p.x < d.x + 760) return "The rock garden is sacred - cross on the planks, do not touch the gravel";
+        if (playTime < 9) return "From Izu Nagaoka to Tokyo - follow the road east";
+    }
     if (playTime < 9) {
         if (level == 0) return "Arrows / A D: move      Space: jump, hold to glide      X: punch";
         if (level == 1) return "Cross the old plank bridge and mind the gaps - Emma cannot swim";
         if (level == 2) return "Careful, the ice is slippery!      Polar bears need two hits";
-        if (level == 3) return "From Izu Nagaoka to Tokyo - follow the road east";
+        if (level == 3 && false) return "From Izu Nagaoka to Tokyo - follow the road east";
     }
     return nullptr;
 }

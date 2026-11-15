@@ -22,7 +22,7 @@ Collect orbs, stomp or punch the enemies, and reach the golden star. Flags are c
 
 **Level 3, Lofoten.** Icy islands under the northern lights. The ground is slippery and the slopes pull you downhill. Curved bridges and a fishing boat link the islands; falling in the sea sends you back to the checkpoint. Polar bears need two hits and get faster after the first.
 
-**Level 4, Japan.** A journey from the ryokan in Izu Nagaoka to Tokyo, with the day turning to dusk and night on the way: Mount Fuji, red bridges, the tunnel of red gates, a temple hall, lanterns and a pagoda in Kyoto, the pagoda, cedars and rock garden of Koyasan, a boat past the great gate in the sea at Hiroshima, Himeji's white castle, then Tokyo's tower and rooftops and a room of hanging lights you climb. A shinkansen passes in the background. Wild boars and crows get in the way.
+**Level 4, Japan.** A journey from the ryokan in Izu Nagaoka to Tokyo, with the day turning to dusk and night on the way: Mount Fuji, red bridges, the tunnel of red gates, a temple hall, lanterns and a pagoda in Kyoto, the pagoda, cedars and rock garden of Koyasan, a boat past the great gate in the sea at Hiroshima, Himeji's white castle, then Tokyo's tower and rooftops and a room of hanging lights you climb. A shinkansen passes in the background. Wild boars and crows get in the way, and the gravel of Koyasan's rock garden must not be touched: a monk guards it, and you cross on the planks above.
 
 Add `#level2`, `#level3` or `#level4` to the address (for example `.../index.html#level4`) to start in that level.
 
