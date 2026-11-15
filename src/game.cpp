@@ -19,13 +19,13 @@ char Game::at(int tx, int ty) const {
     if (ty < 0 || ty >= H) return '.';
     return tiles[ty][tx];
 }
-bool Game::solid(int tx, int ty) const { char c = at(tx, ty); return c == '#' || c == ','; }
+bool Game::solid(int tx, int ty) const { char c = at(tx, ty); return c == '#' || c == ',' || c == 'Z'; }
 float Game::fogAt(float x) const {
     float f = 0;
     for (float fx : fogs) f = std::max(f, 1 - std::fabs(x - fx) / (15 * TILE));
     return std::clamp(f * 1.6f, 0.f, 1.f);
 }
-bool Game::filled(int tx, int ty) const { char c = at(tx, ty); return c == '#' || c == ',' || c == '/' || c == '\\'; }
+bool Game::filled(int tx, int ty) const { char c = at(tx, ty); return c == '#' || c == ',' || c == 'Z' || c == '/' || c == '\\'; }
 bool Game::lastLevel() const { return level >= LEVEL_COUNT - 1; }
 
 void Game::load(int levelIndex) {
@@ -43,7 +43,7 @@ void Game::load(int levelIndex) {
         for (const char* c = set; *c; c++) if (src[ty][tx] == *c) return true;
         return false;
     };
-    static const float moverWidths[] = {150.f, 110.f, 150.f};  // floating pine, rope platform, fishing boat
+    static const float moverWidths[] = {150.f, 110.f, 150.f, 150.f};  // floating pine, rope platform, fishing boat, wooden boat
     float moverW = moverWidths[level];
     int walkerHp = level == 2 ? 2 : 1;                         // polar bears take two hits
     float walkerSpeed = level == 2 ? 50.f : 60.f;
@@ -61,8 +61,9 @@ void Game::load(int levelIndex) {
                 case 'C': checkpoints.push_back({cx, bottom, false}); break;
                 case 'T': case 'S': case 'b': case 'H': case 't': case 'R': case 'D': case 'l': case 'd':
                 case 'k': case 'c': case 'j': case 'p': case 'U': case 'x': case 'h':
+                case 'g': case 'm': case 'a': case 'y': case 'J': case 'L': case 'K': case 'q': case 'W': case 'V':
                     decor.push_back({c, cx, bottom}); break;
-                case 'B': case 'r': decor.push_back({c, cx, bottom}); c = 'w'; continue;  // these sit in water
+                case 'B': case 'r': case 'O': decor.push_back({c, cx, bottom}); c = 'w'; continue;  // these sit in water
                 case 'f': fogs.push_back(cx); break;
                 case '~':  // sideways platform: a run of ~ marks how far its centre travels
                     if (!is(tx - 1, ty, "~")) {
@@ -153,7 +154,7 @@ void Game::die() {
 }
 
 void Game::killEnemy(Enemy& e) {
-    static const int walkerColor[] = {0x9aa0b4, 0xf0503c, 0xf4f8fc}, flyerColor[] = {0xffd23f, 0x3fd6a8, 0xf4f8fc};
+    static const int walkerColor[] = {0x9aa0b4, 0xf0503c, 0xf4f8fc, 0x8a6a4e}, flyerColor[] = {0xffd23f, 0x3fd6a8, 0xf4f8fc, 0x3a4058};
     e.alive = false;
     shake = std::max(shake, 0.15f);
     float cy = e.type == 0 ? e.y - 18 : e.y;
@@ -505,11 +506,13 @@ const char* Game::hint() const {
     if (state != PLAY || p.dead) return nullptr;
     if (p.onLiana >= 0) return "Up / Down: climb      Space + direction: leap off";
     for (const Liana& l : lianas)
-        if (std::fabs(l.x - p.x) < 260 && p.y > l.y0 && p.y < l.y1 + 140) return "Jump onto the liana to grab it";
+        if (std::fabs(l.x - p.x) < 260 && p.y > l.y0 && p.y < l.y1 + 140)
+            return level == 3 ? "Jump onto a strand of lights to grab it" : "Jump onto the liana to grab it";
     if (playTime < 9) {
         if (level == 0) return "Arrows / A D: move      Space: jump, hold to glide      X: punch";
         if (level == 1) return "Cross the old plank bridge and mind the gaps - Emma cannot swim";
         if (level == 2) return "Careful, the ice is slippery!      Polar bears need two hits";
+        if (level == 3) return "From Izu Nagaoka to Tokyo - follow the road east";
     }
     return nullptr;
 }

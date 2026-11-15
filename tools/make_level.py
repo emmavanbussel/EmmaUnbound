@@ -6,14 +6,14 @@ class Map:
     def __init__(s, W, H): s.W, s.H = W, H; s.g = [['.'] * W for _ in range(H)]
     def put(s, x, y, ch):
         assert s.g[y][x] == '.', (x, y, s.g[y][x], ch); s.g[y][x] = ch
-    def block(s, x0, x1, top, bottom):
+    def block(s, x0, x1, top, bottom, ch='#'):
         for x in range(x0, x1 + 1):
-            for y in range(top, bottom + 1): s.g[y][x] = '#'
+            for y in range(top, bottom + 1): s.g[y][x] = ch
     def ground(s, x0, x1, top): s.block(x0, x1, top, s.H - 1)
     def sand(s, x0, x1, top):
         for x in range(x0, x1 + 1):
             for y in range(top, s.H): s.g[y][x] = ','
-    def top(s, x): return next(y for y in range(s.H) if s.g[y][x] in '#,')
+    def top(s, x): return next(y for y in range(s.H) if s.g[y][x] in '#,Z')
     def on(s, x, ch): s.put(x, s.top(x) - 1, ch)
     def plat(s, x0, x1, y):
         for x in range(x0, x1 + 1): s.put(x, y, '=')
@@ -146,10 +146,64 @@ for y in range(17, 20):                                         # the sea
 for x in (30, 64, 118): m.g[17][x] = 'B'                        # moored boats
 level3 = m.rows()
 
+# ---------------------------------------------------------------- Level 4: Japan
+# Izu Nagaoka -> Kyoto -> Koyasan -> Hiroshima -> Himeji -> Tokyo
+m = Map(226, 20)
+def water(x0, x1, top):
+    for x in range(x0, x1 + 1):
+        for y in range(top, m.H):
+            if m.g[y][x] in '.~': m.g[y][x] = 'w' if m.g[y][x] == '.' else '~'
+# Izu Nagaoka: the ryokan, a stream with a red bridge
+m.ground(0, 22, 15); m.ground(28, 49, 15)
+m.on(1, 'K'); m.on(3, 'P'); m.on(5, 'H'); m.on(11, 'S'); m.on(17, 'T'); m.on(20, 'L')
+m.put(7, 12, 'o'); m.put(8, 12, 'o')
+bridge(23, 27, 15, 'n'); water(23, 27, 17)
+m.put(24, 12, 'o'); m.put(25, 11, 'o'); m.put(26, 12, 'o')
+m.on(29, 'T'); m.on(31, 'E'); m.on(34, 'L')
+# Kyoto: the tunnel of red gates, temple hall, lanterns, pagoda, the red bridge
+for x in range(36, 49, 2): m.on(x, 'g')
+for x in (37, 39, 41, 43, 45, 47): m.on(x, 'o')
+m.put(42, 10, 'F')
+slope_up(50, 14, 2); m.ground(52, 72, 13)
+m.on(53, 'C'); m.on(57, 'm'); m.on(62, 'J'); m.on(64, 'o'); m.on(65, 'o'); m.on(67, 'a'); m.on(69, 'E'); m.on(71, 'T')
+bridge(73, 78, 13, 'n'); water(73, 78, 16)
+m.put(75, 9, 'o'); m.put(76, 9, 'o')
+m.ground(79, 95, 13)
+m.on(80, 'T'); m.on(83, 'E'); m.on(86, 'L'); m.on(88, '^'); m.on(89, '^'); m.plat(87, 90, 10)
+for x in (87, 88, 89, 90): m.put(x, 9, 'o')
+m.put(92, 8, 'F'); m.on(93, 'T')
+# Koyasan: up the mountain to the pagoda among the cedars, and the rock garden
+slope_up(96, 12, 3); m.ground(99, 128, 10); m.sand(112, 124, 10)
+m.on(100, 'K'); m.on(101, 'C'); m.on(103, 'K'); m.on(105, 'L'); m.on(108, 'y'); m.on(111, 'K')
+for x in (113, 116, 119, 122): m.on(x, 'q')
+m.on(118, 'E'); m.plat(114, 116, 7); m.plat(119, 121, 6)
+for x in (114, 115, 116): m.put(x, 6, 'o')
+for x in (119, 120, 121): m.put(x, 5, 'o')
+m.on(125, 'L'); m.on(127, 'K')
+slope_down(129, 10, 4); m.ground(133, 140, 14)
+# Hiroshima: by boat across the bay, past the great gate standing in the sea
+m.on(134, 'T'); m.on(136, 'o'); m.on(138, 'T')
+for x in range(143, 157): m.put(x, 15, '~')
+water(141, 158, 15); m.g[16][150] = 'O'
+m.put(146, 12, 'o'); m.put(150, 11, 'o'); m.put(154, 12, 'o'); m.put(151, 8, 'F')
+# Himeji: the white castle
+m.ground(159, 171, 14); m.ground(172, 180, 12)
+m.on(160, 'C'); m.on(162, 'T'); m.on(164, 'o'); m.on(165, 'o'); m.on(167, 'W'); m.on(174, 'T'); m.on(177, 'E'); m.on(179, 'o')
+# Tokyo: the tower, rooftops, and the room of lights
+m.ground(181, 213, 14)
+m.on(183, 'o'); m.on(185, 'V'); m.on(187, 'E'); m.on(189, 'M'); m.on(195, 'M'); m.on(202, 'M')
+m.block(190, 194, 10, 19, 'Z'); m.block(197, 201, 8, 19, 'Z'); m.block(214, 225, 5, 19, 'Z')
+m.on(192, 'o'); m.on(199, 'o'); m.on(207, 'E')
+m.plat(204, 206, 3); m.liana(205, 4, 11, orbs=(6, 8, 10))
+m.plat(209, 211, 1); m.liana(210, 2, 9, orbs=(4, 6, 8))
+m.put(208, 0, 'f')
+m.on(216, 'o'); m.on(217, 'o'); m.on(220, 'G')
+level4 = m.rows()
+
 def arr(name, rows): return 'static const char* const %s[] = {\n' % name + ''.join('    "%s",\n' % r.replace('\\', '\\\\') for r in rows) + '};\n'
 out = '''#pragma once
 // Level maps. One character = one 48px tile.
-//   #  ground        ,  sandy ground        =  one-way plank       ^  spikes
+//   #  ground        ,  sandy ground        Z  building        =  one-way plank       ^  spikes
 //   /  \\  slopes (put ground underneath)    w  water (falling in sends you back to the checkpoint)
 //   n  arched bridge, u  sagging rope / plank bridge (a row of them is one bridge)
 //   o  orb           M  bouncer (mushroom / drum)
@@ -157,21 +211,24 @@ out = '''#pragma once
 //   :  platform that rides up and down this column   ;  same, with an orb
 //   |  liana to climb (a column of them)             i  same, with an orb
 //   E  walking enemy F  flying enemy        C  checkpoint
-//   P  player start  G  goal star           f  fog hangs around this column
+//   P  player start  G  goal star           f  fog (or, in Japan, the room of lights) around this column
 //   Scenery: T tree, S shed / cabin, b sheep, H name sign, t tobacco plant, R stockfish rack,
 //            D deer, l fallen log, d dead tree, k birch, x pine on stilt roots, h the Theehuis,
 //            c j cottages, p power pole, U old bus,
 //            r reeds and B moored boat (place those two in water)
+//   Japan:   S ryokan, T maple, g red gate, m temple hall, a pagoda, y Koyasan pagoda, J lantern rack,
+//            L stone lantern, K cedar, q garden rock, W castle, V Tokyo tower, O great gate in the sea
 // Regenerate with tools/make_level.py, or just edit the rows by hand
 // (all rows of a level must have the same length).
-''' + arr('LEVEL1_ROWS', level1) + '\n' + arr('LEVEL2_ROWS', level2) + '\n' + arr('LEVEL3_ROWS', level3) + '''
+''' + arr('LEVEL1_ROWS', level1) + '\n' + arr('LEVEL2_ROWS', level2) + '\n' + arr('LEVEL3_ROWS', level3) + '\n' + arr('LEVEL4_ROWS', level4) + '''
 struct LevelDef { const char* name; const char* const* rows; int height; };
 static const LevelDef LEVELS[] = {
     {"Heidestein", LEVEL1_ROWS, int(sizeof(LEVEL1_ROWS) / sizeof(LEVEL1_ROWS[0]))},
     {"Vi\\u00f1ales", LEVEL2_ROWS, int(sizeof(LEVEL2_ROWS) / sizeof(LEVEL2_ROWS[0]))},
     {"Lofoten", LEVEL3_ROWS, int(sizeof(LEVEL3_ROWS) / sizeof(LEVEL3_ROWS[0]))},
+    {"Japan", LEVEL4_ROWS, int(sizeof(LEVEL4_ROWS) / sizeof(LEVEL4_ROWS[0]))},
 };
 static const int LEVEL_COUNT = int(sizeof(LEVELS) / sizeof(LEVELS[0]));
 '''
 open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'src', 'level.hpp'), 'w').write(out)
-print('\n'.join(r[:152] for r in level1)); print('\n'.join(r[:70] for r in level2[30:]))
+print('\n'.join(r[:113] for r in level4)); print(); print('\n'.join(r[113:] for r in level4))

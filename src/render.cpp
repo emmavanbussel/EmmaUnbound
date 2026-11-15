@@ -22,6 +22,8 @@ static void drawHud(const Game& g) {
             if (full) { g_fill(0xffffff); g_alpha(0.7); g_circle(x - 5, y - 5, 2.6, FILL); g_alpha(1); }
         }
     }
+    if (g.level == 3 && g.state == Game::PLAY && g.playTime > 3.2f)   // where on the journey we are
+        g_text(japanPlace(g.p.x), VIEW_W / 2, 44, 24, 1, 0xffffff, INK, 6);
     const char* keys = "Arrows / A D: move      Space: jump, hold to glide      X: punch";
     if (const char* tip = g.hint()) g_text(tip, VIEW_W / 2, VIEW_H - 22, 19, 1, 0xffffff, INK, 5);
     if (g.state == Game::PLAY && g.playTime < 3.2f) {  // level name card
@@ -30,7 +32,7 @@ static void drawHud(const Game& g) {
         std::snprintf(buf, sizeof buf, "Level %d", g.level + 1);
         g_text(buf, VIEW_W / 2, 150 - (1 - k) * 20, 30, 1, 0xffffff, INK, 6);
         g_text(g.name.c_str(), VIEW_W / 2, 215 - (1 - k) * 20, 70, 1, INK, INK, 18);
-        g_text(g.name.c_str(), VIEW_W / 2, 211 - (1 - k) * 20, 70, 1, g.level == 0 ? 0xd68fe8 : (g.level == 1 ? 0xffd447 : 0x9fe8ff), INK, 10);
+        g_text(g.name.c_str(), VIEW_W / 2, 211 - (1 - k) * 20, 70, 1, g.level == 0 ? 0xd68fe8 : (g.level == 1 ? 0xffd447 : (g.level == 2 ? 0x9fe8ff : 0xff6a4a)), INK, 10);
         g_alpha(1);
     }
     if (g.state == Game::TITLE) {
@@ -42,7 +44,7 @@ static void drawHud(const Game& g) {
         g_restore();
         if (std::fmod(t, 1.2f) < 0.8f)
             g_text("Press SPACE or tap to start", VIEW_W / 2, 340, 28, 1, 0xffffff, INK, 6);
-        g_text("Press 1, 2 or 3 to pick a level", VIEW_W / 2, 378, 18, 1, 0xffffff, INK, 5);
+        g_text("Press 1, 2, 3 or 4 to pick a level", VIEW_W / 2, 378, 18, 1, 0xffffff, INK, 5);
         g_text(keys, VIEW_W / 2, VIEW_H - 22, 19, 1, 0xffffff, INK, 5);
     }
     if (g.state == Game::WIN) {

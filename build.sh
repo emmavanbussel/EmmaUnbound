@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p docs
 em++ -std=c++17 -O2 -Wall -Wextra \
-  src/main.cpp src/game.cpp src/render.cpp src/world.cpp src/actors.cpp src/gfx.cpp \
+  src/main.cpp src/game.cpp src/render.cpp src/world.cpp src/japan.cpp src/actors.cpp src/gfx.cpp \
   -sENVIRONMENT=web -sEXPORTED_FUNCTIONS=_main,_emma_button,_emma_state,_emma_goto_level \
   -o docs/emma.js
 cp web/index.html docs/index.html

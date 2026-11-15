@@ -25,8 +25,16 @@ void heartPath(float cx, float cy, float s);
 // world.cpp: sky, parallax scenery, terrain, level scenery
 void drawBackground(const Game& g);
 void drawFog(const Game& g, bool front);
+
+// japan.cpp: everything specific to level 4
+void drawJapanBackground(const Game& g);
+bool drawJapanDecor(const Game& g, const Decor& d);
+void drawLightRoom(const Game& g, bool front);
+void drawRedBridge(const Bridge& b);
+const char* japanPlace(float x);
 void drawWires(const Game& g);
 void drawDecor(const Game& g, const Decor& d);
+
 void drawTerrain(const Game& g, int tx0, int tx1, int ty0, int ty1);
 void drawPlanks(const Game& g, int tx0, int tx1, int ty0, int ty1);
 void drawThorns(const Game& g, int tx0, int tx1, int ty0, int ty1);

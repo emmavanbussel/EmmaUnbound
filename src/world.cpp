@@ -29,6 +29,14 @@ static const Theme THEMES[] = {
         0xd9f3ff, 0x6fb8ea, 0xffffff,
         0x2f7fae, 0x154a7a, 0xbfe6ff,
     },
+    {   // Japan: grey-brown earth and stone, moss, pale wood, bamboo
+        {0x3f9bea, 0x9fd8fb, 0xeaf6ff},
+        {0xb09a82, 0x9c876f, 0x88745e, 0x75634f}, 0xd6c8b4,
+        0x9fd466, 0x4f9a4a, 0xd3f08e,
+        0xe6c49a, 0xb98a5a, 0xf5dcb8, 0x8a6440,
+        0xa8d86a, 0x4f9a3c, 0xe0f5a8,
+        0x7cc6e2, 0x3f86c0, 0xe0f6ff,
+    },
 };
 const Theme& theme(const Game& g) { return THEMES[g.level]; }
 
@@ -201,6 +209,7 @@ void drawBackground(const Game& g) {
     float t = g.time;
     float vy = (g.H * TILE - VIEW_H - g.camY);  // how far the camera is above the bottom of the level
     if (g.level == 2) { drawArcticBackground(g, vy); return; }
+    if (g.level == 3) { drawJapanBackground(g); return; }
     float farUp = std::min(vy * 0.10f, 110.f), midUp = std::min(vy * 0.20f, 200.f), nearUp = std::min(vy * 0.34f, 330.f);
     g_lin3(0, 0, 0, VIEW_H, th.sky[0], th.sky[1], th.sky[2]);
     g_rect(0, 0, VIEW_W, VIEW_H);
@@ -337,6 +346,7 @@ void drawBackground(const Game& g) {
 
 // Fog (Heidestein's lakes). The first call hazes the far scenery, the second lays drifting banks over the level.
 void drawFog(const Game& g, bool front) {
+    if (g.level == 3) { drawLightRoom(g, front); return; }
     float f = g.fogAt(g.camX + VIEW_W / 2.f);
     if (f <= 0) return;
     if (!front) {
@@ -561,19 +571,40 @@ static void drawRootPine(float x, float y, uint32_t h) {
     const int BARK = 0x9a7458, BARK_L = 0xc49a74, ROOT = 0x8d7a66;
     float lean = (int(h % 30) - 15) * 0.6f;
     g_save(); g_translate(x, y);
-    // crown: flat, irregular clumps high up
-    static const float crown[][3] = {{-46, -268, 30}, {-8, -292, 36}, {36, -280, 32}, {70, -262, 24}, {-70, -250, 20}, {10, -258, 30}};
-    g_fill(0x1f4d40);
-    for (auto& c : crown) g_circle(c[0] + lean, c[1], c[2] + 3.5f, FILL);
-    for (auto& c : crown) { g_fill(0x3d8f68); g_circle(c[0] + lean, c[1], c[2], FILL); }
-    g_fill(0x5fb486);
-    for (auto& c : crown) g_circle(c[0] + lean - c[2] * 0.25f, c[1] - c[2] * 0.3f, c[2] * 0.45f, FILL);
+    // crown: a Scots pine (grove den) carries flat pads of dark blue-green needles on a few upswept
+    // branches right at the top; below that the trunk is bare apart from the odd dead stub
+    auto bough = [&](float x1, float y1) {
+        g_path(); g_move(lean, -246); g_quad((lean + x1) / 2, -252, x1, y1);
+        g_stroke(INK, 9); g_paint(STROKE); g_stroke(BARK_L, 4.5); g_paint(STROKE);
+    };
+    auto pad = [&](float px, float py, float w) {
+        const int n = 5;
+        const float cx = 0, cy = 0;
+        g_save(); g_translate(px, py); g_scale(1.4, 1.9);
+        g_path(); g_move(cx - w, cy + 5);
+        for (int i = 0; i < n; i++) {
+            float a = cx - w + 2 * w * i / n, b2 = a + 2 * w / n;
+            g_quad((a + b2) / 2, cy - 17 - (i % 2) * 5 - (i == 2 ? 5 : 0), b2, i == n - 1 ? cy + 5 : cy - 3);
+        }
+        g_quad(cx, cy + 13, cx - w, cy + 5); g_close();
+        g_lin(0, cy - 20, 0, cy + 10, 0x3f8a6c, 0x1d5546); g_stroke(INK, 2); g_paint(BOTH);
+        g_stroke(0x74b796, 1.6);                                    // needle tufts
+        for (int i = 0; i < n; i++) {
+            float nx = cx - w + 2 * w * (i + 0.5f) / n;
+            g_path(); g_move(nx - 5, cy - 6); g_line(nx - 7, cy - 12); g_move(nx, cy - 7); g_line(nx, cy - 14); g_move(nx + 5, cy - 6); g_line(nx + 7, cy - 12); g_paint(STROKE);
+        }
+        g_restore();
+    };
+    g_path(); g_move(lean * 0.55f, -168); g_line(lean * 0.55f + 28, -182); g_move(lean * 0.4f, -132); g_line(lean * 0.4f - 24, -143);
+    g_stroke(INK, 7); g_paint(STROKE); g_stroke(0xa89a8a, 3); g_paint(STROKE);                    // dead stubs
+    bough(lean - 74, -244); bough(lean + 76, -252); bough(lean - 40, -268); bough(lean + 40, -280); bough(lean - 2, -296);
+    pad(lean - 78, -250, 22); pad(lean + 78, -258, 24);
+    pad(lean - 42, -274, 34); pad(lean + 42, -286, 34);
+    pad(lean - 2, -304, 30);
     auto limb = [](float x0, float y0, float cx, float cy, float x1, float y1, float w, int col) {
         g_path(); g_move(x0, y0); g_quad(cx, cy, x1, y1);
         g_stroke(INK, w + 5); g_paint(STROKE); g_stroke(col, w); g_paint(STROKE);
     };
-    limb(lean * 0.8f, -210, lean - 30, -232, lean - 44, -250, 5, BARK);
-    limb(lean * 0.8f, -200, lean + 34, -224, lean + 50, -256, 5, BARK);
     // roots behind the trunk
     limb(-4, -58, -70, -70, -128, -2, 6, ROOT);
     limb(6, -56, 60, -84, 132, -4, 6, ROOT);
@@ -742,6 +773,7 @@ static void drawPole(float x, float y) {
 }
 
 void drawWires(const Game& g) {
+    if (g.level != 1) return;
     g_stroke(0x3a3340, 2);
     for (size_t i = 0; i < g.decor.size(); i++) {
         const Decor& a = g.decor[i];
@@ -896,6 +928,7 @@ static void drawSign(float x, float y, const char* text) {
 }
 
 void drawDecor(const Game& g, const Decor& d) {
+    if (g.level == 3 && drawJapanDecor(g, d)) return;
     uint32_t h = hash2(int(d.x), int(d.y));
     float t = g.time;
     switch (d.kind) {
@@ -934,7 +967,7 @@ void drawDecor(const Game& g, const Decor& d) {
 static bool isTop(const Game& g, int tx, int ty) { return g.solid(tx, ty) && !g.filled(tx, ty - 1); }
 // What sits on top of a ground tile: 0 nothing (not a top, or under water), 1 the level's grass / snow, 2 bare sand.
 static int capKind(const Game& g, int tx, int ty) {
-    if (tx < 0 || tx >= g.W || !isTop(g, tx, ty) || g.at(tx, ty - 1) == 'w') return 0;
+    if (tx < 0 || tx >= g.W || !isTop(g, tx, ty) || g.at(tx, ty - 1) == 'w' || g.at(tx, ty) == 'Z') return 0;
     return g.at(tx, ty) == ',' ? 2 : 1;
 }
 static const int SAND[] = {0xf3e4bb, 0xe7d5a4, 0xd9c48f, 0xcab37c};
@@ -953,6 +986,21 @@ void drawTerrain(const Game& g, int tx0, int tx1, int ty0, int ty1) {
                 if (sc == '/') { g_move(x - 0.5, y + TILE + 0.5); g_line(x + TILE + 0.5, y + TILE + 0.5); g_line(x + TILE + 0.5, y - 0.5); }
                 else { g_move(x - 0.5, y - 0.5); g_line(x - 0.5, y + TILE + 0.5); g_line(x + TILE + 0.5, y + TILE + 0.5); }
                 g_close(); g_paint(FILL);
+                continue;
+            }
+            if (sc == 'Z') {  // Tokyo: a block of high-rise, lit windows in a concrete grid
+                bool roofTile = !g.filled(tx, ty - 1);
+                g_fill(0x6c7890); g_rect(x - 0.5, y - 0.5, TILE + 1, TILE + 1);
+                for (int wy = 0; wy < 2; wy++)
+                    for (int wx = 0; wx < 2; wx++) {
+                        uint32_t h = hash2(tx * 2 + wx, ty * 2 + wy);
+                        g_fill(h % 5 < 2 ? 0xffe9a0 : (h % 5 == 2 ? 0xbfe0f5 : 0x3d4860));
+                        g_rect(x + 5 + wx * 24, y + (roofTile && wy == 0 ? 14 : 6) + wy * 24, 14, roofTile && wy == 0 ? 8 : 14);
+                    }
+                if (roofTile) {  // parapet
+                    g_fill(0xb8c2d4); g_stroke(INK, 3.5); g_rrect(x - (g.filled(tx - 1, ty) ? 4 : 5), y - 7, TILE + (g.filled(tx + 1, ty) ? 8 : 10), 14, 3, FILL);
+                    g_path(); g_move(x - 1, y - 7); g_line(x + TILE + 1, y - 7); g_paint(STROKE);
+                }
                 continue;
             }
             if (!g.solid(tx, ty)) continue;
@@ -1055,6 +1103,7 @@ void drawTerrain(const Game& g, int tx0, int tx1, int ty0, int ty1) {
             int kind = h % 9;
             float x = tx * TILE + 10 + (h >> 6) % 28, y = ty * TILE - 7;
             float sway = std::sin(t * 2 + tx * 1.7f) * 3;
+            if (g.level == 3 && (g.at(tx, ty) == ',' || g.at(tx, ty) == 'Z')) continue;  // raked gravel and rooftops stay bare
             if (g.at(tx, ty) == ',') {  // sand: only tufts of dry grass and the odd sprig of heather
                 if (kind <= 3) {
                     for (int i = -2; i <= 2; i++) {
@@ -1180,7 +1229,7 @@ void drawWater(const Game& g, int tx0, int tx1, int ty0, int ty1) {
             bool top = g.at(tx, ty - 1) != 'w';
             while (end + 1 < g.W && g.at(end + 1, ty) == 'w' && (g.at(end + 1, ty - 1) != 'w') == top) end++;
             float x0 = tx * TILE, x1 = (end + 1) * TILE, y = ty * TILE;
-            float opacity = g.level == 1 ? 0.97f : (g.level == 0 ? 0.92f : 0.8f);  // the river is muddy
+            float opacity = g.level == 1 ? 0.97f : (g.level == 2 ? 0.8f : 0.93f);  // the river is muddy
             g_alpha(opacity);
             if (top) {
                 g_lin(0, y + WATER_TOP, 0, y + TILE, th.water0, th.water1);
@@ -1235,6 +1284,7 @@ static void drawPlankBridge(const Bridge& b) {
 
 void drawBridge(const Game& g, const Bridge& b) {
     if (g.level == 1) { drawPlankBridge(b); return; }
+    if (g.level == 3) { drawRedBridge(b); return; }
     bool rope = b.arch < 0;
     float deck = rope ? 8 : 12;
     auto curve = [&](float dy, bool reverse) {
@@ -1276,6 +1326,7 @@ void drawBridge(const Game& g, const Bridge& b) {
         float y = bridgeY(b, x);
         g_path(); g_move(x, y + 2.5); g_line(x, y + deck - 2.5); g_paint(STROKE);
     }
+    if (g.level == 3) return;
     g_stroke(0xffffff, 2.5); g_alpha(0.8);  // a dusting of snow
     g_path(); g_move(b.x0 + 6, b.y + 1); for (float x = b.x0 + 6; x <= b.x1 - 6; x += 8) g_line(x, bridgeY(b, x) + 1.5f); g_paint(STROKE);
     g_alpha(1);

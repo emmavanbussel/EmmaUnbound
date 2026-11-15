@@ -12,7 +12,7 @@ Emma has no neck, arms or legs: her head, hands and feet float freely.
 | Climb a liana | Up / Down (or W / S) | ▲ ▼ |
 | Leap off a liana | Space or Z, with a direction | JUMP |
 | Punch (flying fist) | X, J or K | ✊ |
-| Pick a level | 1, 2 or 3 | |
+| Pick a level | 1, 2, 3 or 4 | |
 
 Collect orbs, stomp or punch the enemies, and reach the golden star. Flags are checkpoints and refill your hearts.
 
@@ -22,7 +22,9 @@ Collect orbs, stomp or punch the enemies, and reach the golden star. Flags are c
 
 **Level 3, Lofoten.** Icy islands under the northern lights. The ground is slippery and the slopes pull you downhill. Curved bridges and a fishing boat link the islands; falling in the sea sends you back to the checkpoint. Polar bears need two hits and get faster after the first.
 
-Add `#level2` or `#level3` to the address (for example `.../index.html#level3`) to start in that level.
+**Level 4, Japan.** A journey from the ryokan in Izu Nagaoka to Tokyo, with the day turning to dusk and night on the way: Mount Fuji, red bridges, the tunnel of red gates, a temple hall, lanterns and a pagoda in Kyoto, the pagoda, cedars and rock garden of Koyasan, a boat past the great gate in the sea at Hiroshima, Himeji's white castle, then Tokyo's tower and rooftops and a room of hanging lights you climb. A shinkansen passes in the background. Wild boars and crows get in the way.
+
+Add `#level2`, `#level3` or `#level4` to the address (for example `.../index.html#level4`) to start in that level.
 
 ## Publish on GitHub Pages
 
@@ -52,10 +54,11 @@ The page has to be served over HTTP; opening `docs/index.html` straight from dis
 | `src/main.cpp` | Main loop (fixed 120 Hz physics step) and keyboard / touch input |
 | `src/game.hpp`, `src/game.cpp` | Game rules: player physics, slopes, bridges, lianas, platforms, water, fist, enemies, pickups, camera. Tuning constants are at the top of `game.hpp` |
 | `src/world.cpp` | Sky, background scenery, terrain and level scenery, with the colours for each level's theme |
+| `src/japan.cpp` | Everything drawn only in level 4: background, scenery, the red bridge, the room of lights |
 | `src/actors.cpp` | Emma, enemies, platforms (floating pine, rope platform, boat), lianas and pickups |
 | `src/render.cpp`, `src/draw.hpp` | Frame assembly, HUD, and shared drawing declarations |
 | `src/gfx.hpp`, `src/gfx.cpp` | Thin C++ wrapper around the browser's Canvas 2D API |
-| `src/level.hpp` | The three levels as ASCII maps (legend at the top of the file) |
+| `src/level.hpp` | The four levels as ASCII maps (legend at the top of the file) |
 | `tools/make_level.py` | Script that generates `level.hpp` |
 | `web/index.html` | Page template, copied into `docs/` by the build |
 | `docs/` | Build output served by GitHub Pages |
