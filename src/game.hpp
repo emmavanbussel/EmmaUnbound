@@ -10,6 +10,7 @@ constexpr int VIEW_W = 960, VIEW_H = 540;
 // Player tuning (pixels, seconds)
 constexpr float RUN_SPEED = 290.f;
 constexpr float ACCEL_GROUND = 2600.f, ACCEL_AIR = 1700.f;
+constexpr float ACCEL_ICE = 1000.f, FRICTION_ICE = 420.f, SLOPE_SLIDE = 560.f;  // Lofoten is slippery
 constexpr float GRAVITY = 2300.f;
 constexpr float JUMP_SPEED = 860.f;      // ~3.3 tiles high
 constexpr float GLIDE_FALL = 95.f;       // max fall speed while hair-copter gliding
@@ -18,6 +19,7 @@ constexpr float CLIMB_SPEED = 175.f;     // on lianas
 constexpr float COYOTE_TIME = 0.10f, JUMP_BUFFER = 0.12f;
 constexpr float PLAYER_HALF_W = 13.f, PLAYER_H = 58.f;
 constexpr float MAX_FALL_TILES = 14.f;   // falling further than this from the last footing counts as a pit
+constexpr float WATER_TOP = 24.f;       // the water surface sits this far below the top of its tile
 constexpr int MAX_HP = 3;
 
 struct Input {
@@ -33,6 +35,7 @@ struct Player {
     int dir = 1;
     bool grounded = false, jumping = false, gliding = false;
     int onMover = -1, onLiana = -1;
+    int onSlope = 0;  // +1 on a '/' slope, -1 on a '\\' slope
     float coyote = 0, jumpBuf = 0, grabCd = 0;
     float invuln = 0, lock = 0;
     int hp = MAX_HP;
@@ -43,14 +46,24 @@ struct Player {
 };
 
 struct Fist { bool active = false, returning = false; float x = 0, y = 0, vx = 0, dist = 0; };
-struct Enemy { int type; float x, y, vx, x0, y0, t; bool alive; };  // type 0 walker, 1 flyer
+struct Enemy { int type; float x, y, vx, x0, y0, t; bool alive; int hp; float hitT; };  // type 0 walker, 1 flyer
 struct Orb { float x, y, phase; bool taken; };
 struct Bouncer { float x, y, bounceT; };
 // A platform you can ride. It glides back and forth between (ax,ay) and (bx,by); x,y is its top centre.
-struct Mover { float ax, ay, bx, by, w, x, y, prevX, prevY, phase; };
+struct Mover {
+    float ax, ay, bx, by, w, x, y, prevX, prevY, phase;
+    // A raft is a fruit hanging over water: 1 hanging, 2 falling after a punch, 3 floating (drifts while you ride it).
+    int raft = 0;
+    float homeX = 0, hangY = 0, floatY = 0, endX = 0, vy = 0;
+};
+// A curved walkway between x0 and x1. arch > 0 humps upwards, arch < 0 sags like a rope bridge.
+struct Bridge { float x0, x1, y, arch; };
+inline float bridgeY(const Bridge& b, float x) {
+    return b.y - b.arch * std::sin(3.14159265f * (x - b.x0) / (b.x1 - b.x0));
+}
 struct Liana { float x, y0, y1; };
 struct Checkpoint { float x, y; bool active; };
-struct Decor { char kind; float x, y; };  // scenery: 'T' tree, 'S' shed, 'b' sheep, 'H' sign
+struct Decor { char kind; float x, y; };  // scenery, see the legend in level.hpp
 struct Particle { float x, y, vx, vy, grav, life, maxLife, size; int color; int kind; };  // kind 0 dot, 1 star
 
 inline float lianaSway(const Liana& l, float y, float t) {
@@ -60,7 +73,7 @@ inline float lianaSway(const Liana& l, float y, float t) {
 
 struct Game {
     enum State { TITLE, PLAY, WIN } state = TITLE;
-    int level = 0;  // 0 Heidestein, 1 Vinales
+    int level = 0;  // 0 Heidestein, 1 Vinales, 2 Lofoten
     std::string name;
     int W = 0, H = 0;
     std::vector<std::string> tiles;
@@ -71,6 +84,7 @@ struct Game {
     std::vector<Bouncer> bouncers;
     std::vector<Mover> movers;
     std::vector<Liana> lianas;
+    std::vector<Bridge> bridges;
     std::vector<Checkpoint> checkpoints;
     std::vector<Decor> decor;
     std::vector<Particle> particles;
@@ -85,6 +99,8 @@ struct Game {
 
     char at(int tx, int ty) const;
     bool solid(int tx, int ty) const;
+    bool filled(int tx, int ty) const;  // solid ground or a slope
+    const char* hint() const;           // a tip for where the player is right now, or nullptr
 
 private:
     void stepPlayer(const Input& in, float dt);
@@ -97,6 +113,8 @@ private:
     void die();
     void respawn();
     void killEnemy(Enemy& e);
+    bool hitEnemy(Enemy& e);
+    bool slopeSurface(float x, float y, float& surf, int& dir) const;
     void takeOrb(Orb& o);
     void burst(float x, float y, int n, int color, float speed, int kind, float size = 5);
 };

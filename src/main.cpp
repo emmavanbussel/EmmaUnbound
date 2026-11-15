@@ -36,7 +36,7 @@ static EM_BOOL onKey(int type, const EmscriptenKeyboardEvent* e, void*) {
     else if (is("Space") || is("KeyZ")) keyJ = down;
     else if (is("KeyX") || is("KeyJ") || is("KeyK")) keyP = down;
     else if (is("Enter")) { if (down && !e->repeat) pendStart = true; }
-    else if (is("Digit1") || is("Digit2")) { if (down && !e->repeat) pendLevel = is("Digit1") ? 0 : 1; }
+    else if (is("Digit1") || is("Digit2") || is("Digit3")) { if (down && !e->repeat) pendLevel = e->code[5] - '1'; }
     else return EM_FALSE;
     refreshHeld();
     return EM_TRUE;

@@ -13,6 +13,8 @@ void g_stroke(int color, double width);
 void g_alpha(double a);
 void g_lin(double x0, double y0, double x1, double y1, int c0, int c1);            // fill = linear gradient
 void g_lin3(double x0, double y0, double x1, double y1, int c0, int c1, int c2);  // 3-stop gradient
+// vertical-ish gradient with three stops that each have their own opacity (used for the northern lights)
+void g_lin3a(double x0, double y0, double x1, double y1, int c0, double a0, int c1, double a1, int c2, double a2);
 void g_rad(double x, double y, double r, int c0, double a0, int c1, double a1);   // fill = radial glow
 
 void g_rect(double x, double y, double w, double h);

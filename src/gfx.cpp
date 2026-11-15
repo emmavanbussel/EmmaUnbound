@@ -40,6 +40,11 @@ EM_JS(void, g_lin3, (double x0, double y0, double x1, double y1, int c0, int c1,
   g.addColorStop(0, EG.col(c0)); g.addColorStop(0.55, EG.col(c1)); g.addColorStop(1, EG.col(c2));
   EG.G.fillStyle = g;
 });
+EM_JS(void, g_lin3a, (double x0, double y0, double x1, double y1, int c0, double a0, int c1, double a1, int c2, double a2), {
+  var g = EG.G.createLinearGradient(x0, y0, x1, y1);
+  g.addColorStop(0, EG.rgba(c0, a0)); g.addColorStop(0.45, EG.rgba(c1, a1)); g.addColorStop(1, EG.rgba(c2, a2));
+  EG.G.fillStyle = g;
+});
 EM_JS(void, g_rad, (double x, double y, double r, int c0, double a0, int c1, double a1), {
   var g = EG.G.createRadialGradient(x, y, 0, x, y, r);
   g.addColorStop(0, EG.rgba(c0, a0)); g.addColorStop(1, EG.rgba(c1, a1));

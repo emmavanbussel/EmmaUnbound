@@ -12,15 +12,17 @@ Emma has no neck, arms or legs: her head, hands and feet float freely.
 | Climb a liana | Up / Down (or W / S) | ▲ ▼ |
 | Leap off a liana | Space or Z, with a direction | JUMP |
 | Punch (flying fist) | X, J or K | ✊ |
-| Pick a level | 1 or 2 | |
+| Pick a level | 1, 2 or 3 | |
 
 Collect orbs, stomp or punch the enemies, and reach the golden star. Flags are checkpoints and refill your hearts.
 
 **Level 1, Heidestein.** Heath and pine forest: purple heather, pines, wolves, a schaapskooi with sheep, mushrooms to bounce on and a drifting cloud.
 
-**Level 2, Viñales.** A climb up and to the right over red earth and mogote hills: lianas to climb, floating fruit to ride (lifts and a ferry), a conga drum to bounce on, crabs and beetles. Jump at a liana to grab it.
+**Level 2, Viñales.** A climb up and to the right over red earth, past tobacco fields and drying sheds, with mogotes behind. Punch the guava hanging over the river so it drops in, then ride it across (Emma cannot swim). After that: lianas to climb, flying guavas to ride, a conga drum to bounce on, crabs and beetles.
 
-Add `#level2` to the address (for example `.../index.html#level2`) to start in level 2.
+**Level 3, Lofoten.** Icy islands under the northern lights. The ground is slippery and the slopes pull you downhill. Curved bridges and a fishing boat link the islands; falling in the sea sends you back to the checkpoint. Polar bears need two hits and get faster after the first.
+
+Add `#level2` or `#level3` to the address (for example `.../index.html#level3`) to start in that level.
 
 ## Publish on GitHub Pages
 
@@ -48,12 +50,12 @@ The page has to be served over HTTP; opening `docs/index.html` straight from dis
 | Path | What it is |
 | --- | --- |
 | `src/main.cpp` | Main loop (fixed 120 Hz physics step) and keyboard / touch input |
-| `src/game.hpp`, `src/game.cpp` | Game rules: player physics, lianas, platforms, fist, enemies, pickups, camera. Tuning constants are at the top of `game.hpp` |
+| `src/game.hpp`, `src/game.cpp` | Game rules: player physics, slopes, bridges, lianas, platforms, water, fist, enemies, pickups, camera. Tuning constants are at the top of `game.hpp` |
 | `src/world.cpp` | Sky, background scenery, terrain and level scenery, with the colours for each level's theme |
-| `src/actors.cpp` | Emma, enemies, platforms, lianas and pickups |
+| `src/actors.cpp` | Emma, enemies, platforms (cloud, guava, boat), lianas and pickups |
 | `src/render.cpp`, `src/draw.hpp` | Frame assembly, HUD, and shared drawing declarations |
 | `src/gfx.hpp`, `src/gfx.cpp` | Thin C++ wrapper around the browser's Canvas 2D API |
-| `src/level.hpp` | Both levels as ASCII maps (legend at the top of the file) |
+| `src/level.hpp` | The three levels as ASCII maps (legend at the top of the file) |
 | `tools/make_level.py` | Script that generates `level.hpp` |
 | `web/index.html` | Page template, copied into `docs/` by the build |
 | `docs/` | Build output served by GitHub Pages |

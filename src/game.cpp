@@ -20,7 +20,7 @@ char Game::at(int tx, int ty) const {
     return tiles[ty][tx];
 }
 bool Game::solid(int tx, int ty) const { return at(tx, ty) == '#'; }
-
+bool Game::filled(int tx, int ty) const { char c = at(tx, ty); return c == '#' || c == '/' || c == '\\'; }
 bool Game::lastLevel() const { return level >= LEVEL_COUNT - 1; }
 
 void Game::load(int levelIndex) {
@@ -28,7 +28,7 @@ void Game::load(int levelIndex) {
     const LevelDef& def = LEVELS[level];
     name = def.name;
     tiles.clear(); enemies.clear(); orbs.clear(); bouncers.clear(); movers.clear();
-    lianas.clear(); checkpoints.clear(); decor.clear(); particles.clear();
+    lianas.clear(); bridges.clear(); checkpoints.clear(); decor.clear(); particles.clear();
     H = def.height;
     for (int y = 0; y < H; y++) tiles.emplace_back(def.rows[y]);
     W = int(tiles[0].size());
@@ -38,7 +38,10 @@ void Game::load(int levelIndex) {
         for (const char* c = set; *c; c++) if (src[ty][tx] == *c) return true;
         return false;
     };
-    float moverW = level == 0 ? 124.f : 104.f;
+    static const float moverWidths[] = {124.f, 104.f, 150.f};  // cloud, guava, fishing boat
+    float moverW = moverWidths[level];
+    int walkerHp = level == 2 ? 2 : 1;                         // polar bears take two hits
+    float walkerSpeed = level == 2 ? 50.f : 60.f;
     for (int ty = 0; ty < H; ty++) {
         for (int tx = 0; tx < W; tx++) {
             char& c = tiles[ty][tx];
@@ -47,18 +50,20 @@ void Game::load(int levelIndex) {
                 case 'P': spawnX = cx; spawnY = bottom; break;
                 case 'G': goalX = cx; goalY = bottom; break;
                 case 'o': orbs.push_back({cx, mid, tx * 0.7f, false}); break;
-                case 'E': enemies.push_back({0, cx, bottom, -60.f, cx, bottom, tx * 1.3f, true}); break;
-                case 'F': enemies.push_back({1, cx, mid, 0, cx, mid, tx * 1.3f, true}); break;
+                case 'E': enemies.push_back({0, cx, bottom, -walkerSpeed, cx, bottom, tx * 1.3f, true, walkerHp, 0}); break;
+                case 'F': enemies.push_back({1, cx, mid, 0, cx, mid, tx * 1.3f, true, 1, 0}); break;
                 case 'M': bouncers.push_back({cx, bottom, 0}); break;
                 case 'C': checkpoints.push_back({cx, bottom, false}); break;
-                case 'T': case 'S': case 'b': case 'H': decor.push_back({c, cx, bottom}); break;
+                case 'T': case 'S': case 'b': case 'H': case 't': case 'Y': case 'R':
+                    decor.push_back({c, cx, bottom}); break;
+                case 'B': decor.push_back({c, cx, bottom}); c = 'w'; continue;  // a moored boat sits in water
                 case '~':  // sideways platform: a run of ~ marks how far its centre travels
                     if (!is(tx - 1, ty, "~")) {
                         int n = 1;
                         while (is(tx + n, ty, "~")) n++;
                         float y = ty * TILE;
                         if (n == 1) movers.push_back({cx - 74, y, cx + 74, y, moverW, cx, y, cx, y, tx * 1.f});
-                        else movers.push_back({cx, y, cx + (n - 1) * TILE, y, moverW, cx, y, cx, y, tx * 1.f});
+                        else movers.push_back({cx, y, cx + (n - 1) * TILE, y, moverW, cx, y, cx, y, 0});
                     }
                     break;
                 case ':': case ';':  // lift: rides up and down its column
@@ -70,6 +75,18 @@ void Game::load(int levelIndex) {
                         movers.push_back({cx, y1, cx, y0, moverW, cx, y1, cx, y1, 0});
                     }
                     break;
+                case 'Q': {  // hanging fruit: find the water underneath and how far it stretches to the right
+                    int r = ty;
+                    while (r < H - 1 && !is(tx, r, "w")) r++;
+                    int xe = tx;
+                    while (is(xe + 1, r, "w")) xe++;
+                    float floatY = r * TILE, hangY = floatY - 62;
+                    Mover m{cx, hangY, cx, hangY, moverW, cx, hangY, cx, hangY, 0};
+                    m.raft = 1; m.homeX = cx; m.hangY = hangY; m.floatY = floatY;
+                    m.endX = (xe + 1) * TILE - moverW / 2 + 4;
+                    movers.push_back(m);
+                    break;
+                }
                 case '|': case 'i':  // liana
                     if (c == 'i') orbs.push_back({cx, mid, tx * 0.7f, false});
                     if (!is(tx, ty - 1, "|i")) {
@@ -78,7 +95,18 @@ void Game::load(int levelIndex) {
                         lianas.push_back({cx, ty * TILE, (ty + n) * TILE});
                     }
                     break;
-                default: continue;  // keep '#', '=', '^', '.'
+                case 'n': case 'u': {  // curved bridge across a run of cells
+                    const char* same = c == 'n' ? "n" : "u";
+                    if (!is(tx - 1, ty, same)) {
+                        int n = 1;
+                        while (is(tx + n, ty, same)) n++;
+                        float span = n * TILE;
+                        float arch = c == 'n' ? std::min(46.f, span * 0.13f) : -std::min(30.f, span * 0.08f);
+                        bridges.push_back({tx * TILE, (tx + n) * TILE, ty * TILE, arch});
+                    }
+                    break;
+                }
+                default: continue;  // keep '#', '=', '^', '/', '\', 'w', '.'
             }
             c = '.';
         }
@@ -95,6 +123,8 @@ void Game::respawn() {
     p.x = spawnX; p.y = p.prevY = p.lastSafeY = spawnY;
     p.invuln = 1.5f;
     fist.active = false;
+    for (auto& m : movers)  // hang the fruit back on its tree
+        if (m.raft) { m.raft = 1; m.x = m.prevX = m.homeX; m.y = m.prevY = m.hangY; m.vy = 0; }
 }
 
 void Game::burst(float x, float y, int n, int color, float speed, int kind, float size) {
@@ -114,7 +144,7 @@ void Game::hurt(float fromX) {
     if (p.hp <= 0) { die(); return; }
     p.invuln = 1.4f; p.lock = 0.28f;
     p.vy = -560; p.vx = (p.x < fromX ? -1.f : 1.f) * 280;
-    p.grounded = false; p.jumping = false; p.onMover = -1;
+    p.grounded = false; p.jumping = false; p.onMover = -1; p.onSlope = 0;
     if (p.onLiana >= 0) { p.onLiana = -1; p.grabCd = 0.5f; }
 }
 
@@ -127,11 +157,23 @@ void Game::die() {
 }
 
 void Game::killEnemy(Enemy& e) {
+    static const int walkerColor[] = {0x9aa0b4, 0xf0503c, 0xf4f8fc}, flyerColor[] = {0xffd23f, 0x3fd6a8, 0xf4f8fc};
     e.alive = false;
     shake = std::max(shake, 0.15f);
     float cy = e.type == 0 ? e.y - 18 : e.y;
-    burst(e.x, cy, 14, e.type == 0 ? (level == 0 ? 0x9aa0b4 : 0xf0503c) : (level == 0 ? 0xffd23f : 0x3fd6a8), 260, 0, 7);
+    burst(e.x, cy, 14, e.type == 0 ? walkerColor[level] : flyerColor[level], 260, 0, 7);
     burst(e.x, cy, 8, 0xffffff, 300, 1, 5);
+}
+
+// One punch or stomp. Returns false if the enemy is still reeling from the last hit.
+bool Game::hitEnemy(Enemy& e) {
+    if (e.hitT > 0) return false;
+    if (--e.hp <= 0) { killEnemy(e); return true; }
+    e.hitT = 0.7f;                                  // stunned for a moment, then angrier and faster
+    e.vx = (e.vx > 0 ? 1.f : -1.f) * 95;
+    shake = std::max(shake, 0.12f);
+    burst(e.x, e.y - 30, 8, 0xffffff, 240, 1, 5);
+    return true;
 }
 
 void Game::takeOrb(Orb& o) {
@@ -140,6 +182,24 @@ void Game::takeOrb(Orb& o) {
 }
 
 // ---------------------------------------------------------------------------
+
+// Is there a slope under this point? Gives the height of its surface at x and which way it leans.
+bool Game::slopeSurface(float x, float y, float& surf, int& dir) const {
+    int cx = int(std::floor(x / TILE));
+    float fx = x - cx * TILE;
+    int r0 = int(std::floor((y - 1) / TILE));
+    static const int order[] = {0, 1, -1};
+    for (int d : order) {
+        int r = r0 + d;
+        char c = at(cx, r);
+        if (c != '/' && c != '\\') continue;
+        float s = c == '/' ? (r + 1) * TILE - fx : r * TILE + fx;
+        if (d == -1 && y - s > 20) continue;  // that one is overhead, not underfoot
+        surf = s; dir = c == '/' ? 1 : -1;
+        return true;
+    }
+    return false;
+}
 
 void Game::stepPlayer(const Input& in, float dt) {
     if (p.dead) {
@@ -155,6 +215,7 @@ void Game::stepPlayer(const Input& in, float dt) {
 
     if (p.onLiana >= 0) { stepOnLiana(in, dt); return; }
     bool jumpHeld = in.jump || in.up, jumpPressed = in.jumpPressed || in.upPressed;
+    bool ice = level == 2;
 
     // ride moving platforms (sideways and up / down)
     if (p.onMover >= 0) { const Mover& m = movers[p.onMover]; p.x += m.x - m.prevX; p.y = m.y; }
@@ -162,14 +223,19 @@ void Game::stepPlayer(const Input& in, float dt) {
     // horizontal control
     float ax = p.lock > 0 ? 0 : float(in.right) - float(in.left);
     if (ax != 0) p.dir = ax > 0 ? 1 : -1;
-    if (p.lock <= 0) p.vx = approach(p.vx, ax * RUN_SPEED, (p.grounded ? ACCEL_GROUND : ACCEL_AIR) * dt);
+    if (p.lock <= 0) {
+        float accel = !p.grounded ? ACCEL_AIR : (ice && p.onMover < 0 ? (ax != 0 ? ACCEL_ICE : FRICTION_ICE) : ACCEL_GROUND);
+        bool sliding = ice && p.grounded && p.onSlope != 0;
+        if (!(sliding && ax == 0)) p.vx = approach(p.vx, ax * RUN_SPEED, accel * dt);
+        if (sliding) p.vx = std::clamp(p.vx - p.onSlope * SLOPE_SLIDE * dt, -430.f, 430.f);  // icy slopes pull you downhill
+    }
 
     // jump: buffered press + coyote time, variable height
     p.jumpBuf = jumpPressed ? JUMP_BUFFER : p.jumpBuf - dt;
     p.coyote = p.grounded ? COYOTE_TIME : p.coyote - dt;
     if (p.jumpBuf > 0 && p.coyote > 0 && p.lock <= 0) {
         p.vy = -JUMP_SPEED; p.jumpBuf = 0; p.coyote = 0;
-        p.grounded = false; p.jumping = true; p.onMover = -1;
+        p.grounded = false; p.jumping = true; p.onMover = -1; p.onSlope = 0;
         p.squash = -0.5f;
         burst(p.x, p.y, 5, 0xffffff, 90, 0, 5);
     }
@@ -182,11 +248,12 @@ void Game::stepPlayer(const Input& in, float dt) {
     if (p.gliding && p.vy > GLIDE_FALL) p.vy = std::max(GLIDE_FALL, p.vy - 5000 * dt);
     p.vy = std::min(p.vy, 1100.f);
 
-    // --- move X, collide with solid tiles
+    // --- move X, collide with solid tiles. The lowest 14px of the body is ignored so that slopes and
+    //     small lips do not stop her.
     p.prevY = p.y;
     p.x += p.vx * dt;
     {
-        int ty0 = int(std::floor((p.y - PLAYER_H) / TILE)), ty1 = int(std::floor((p.y - 1) / TILE));
+        int ty0 = int(std::floor((p.y - PLAYER_H) / TILE)), ty1 = int(std::floor((p.y - 15) / TILE));
         int txr = int(std::floor((p.x + PLAYER_HALF_W) / TILE)), txl = int(std::floor((p.x - PLAYER_HALF_W) / TILE));
         for (int ty = ty0; ty <= ty1; ty++) {
             if (solid(txr, ty)) { p.x = txr * TILE - PLAYER_HALF_W - 0.01f; if (p.vx > 0) p.vx = 0; }
@@ -198,17 +265,30 @@ void Game::stepPlayer(const Input& in, float dt) {
     bool wasGrounded = p.grounded;
     float fallSpeed = p.vy;
     p.y += p.vy * dt;
-    p.grounded = false; p.onMover = -1;
+    p.grounded = false; p.onMover = -1; p.onSlope = 0;
     int tx0 = int(std::floor((p.x - PLAYER_HALF_W) / TILE)), tx1 = int(std::floor((p.x + PLAYER_HALF_W) / TILE));
     if (p.vy >= 0) {
-        int ty = int(std::floor(p.y / TILE));
-        for (int tx = tx0; tx <= tx1; tx++) {
-            char c = at(tx, ty);
-            bool plank = c == '=' && p.prevY <= ty * TILE + 0.5f;  // one-way: only when coming from above
-            if (solid(tx, ty) || plank) { p.y = ty * TILE; p.vy = 0; p.grounded = true; }
+        float surf; int dir;
+        if (slopeSurface(p.x, p.y, surf, dir)) {
+            // slopes: follow the surface; when walking downhill stay glued to it
+            if (p.y >= surf || (wasGrounded && surf - p.y <= 16)) { p.y = surf; p.vy = 0; p.grounded = true; p.onSlope = dir; }
+        } else {
+            int ty = int(std::floor(p.y / TILE));
+            for (int tx = tx0; tx <= tx1; tx++) {
+                char c = at(tx, ty);
+                bool plank = c == '=' && p.prevY <= ty * TILE + 0.5f;  // one-way: only when coming from above
+                if (solid(tx, ty) || plank) { p.y = ty * TILE; p.vy = 0; p.grounded = true; }
+            }
+        }
+        for (const Bridge& b : bridges) {  // curved bridges: one-way, and glued like slopes
+            if (p.x < b.x0 || p.x > b.x1) continue;
+            float s = bridgeY(b, p.x);
+            bool landing = p.y >= s && p.prevY <= s + 14, glued = wasGrounded && p.y < s && s - p.y <= 14;
+            if (landing || glued) { p.y = s; p.vy = 0; p.grounded = true; }
         }
         for (size_t i = 0; i < movers.size(); i++) {
             const Mover& m = movers[i];
+            if (m.raft == 1 || m.raft == 2) continue;  // still on the tree, or falling
             if (p.prevY <= std::max(m.y, m.prevY) + 1 && p.y >= m.y && std::fabs(p.x - m.x) < m.w / 2 + PLAYER_HALF_W - 6) {
                 p.y = m.y; p.vy = 0; p.grounded = true; p.onMover = int(i);
             }
@@ -240,13 +320,22 @@ void Game::stepPlayer(const Input& in, float dt) {
         }
     }
 
-    // thorns
+    // spikes
     {
         int ty0 = int(std::floor((p.y - 30) / TILE)), ty1 = int(std::floor((p.y - 2) / TILE));
         int ax0 = int(std::floor((p.x - 9) / TILE)), ax1 = int(std::floor((p.x + 9) / TILE));
         for (int ty = ty0; ty <= ty1; ty++)
             for (int tx = ax0; tx <= ax1; tx++)
                 if (at(tx, ty) == '^' && p.y > (ty + 1) * TILE - 28) hurt(p.x + p.dir * 10);
+    }
+
+    // water: Emma cannot swim
+    {
+        int tx = int(std::floor(p.x / TILE)), ty = int(std::floor((p.y - 6) / TILE));
+        if (at(tx, ty) == 'w' && (at(tx, ty - 1) == 'w' || p.y > ty * TILE + WATER_TOP + 22)) {
+            burst(p.x, ty * TILE + WATER_TOP, 16, level == 2 ? 0xbfe6ff : 0x9fe8ff, 280, 0, 7);
+            die();
+        }
     }
 
     // pits: off the bottom of the map, or a very long fall
@@ -323,35 +412,47 @@ void Game::stepFist(float dt) {
     }
     for (auto& e : enemies) {
         if (!e.alive) continue;
-        float cy = e.type == 0 ? e.y - 18 : e.y;
-        if (std::fabs(e.x - fist.x) < 28 && std::fabs(cy - fist.y) < 28) { killEnemy(e); fist.returning = true; }
+        float cy = e.type == 0 ? e.y - 20 : e.y, reach = e.type == 0 && level == 2 ? 36.f : 28.f;
+        if (std::fabs(e.x - fist.x) < reach && std::fabs(cy - fist.y) < reach) {
+            if (hitEnemy(e)) fist.returning = true;
+        }
+    }
+    for (auto& m : movers) {  // cut a hanging fruit loose
+        if (m.raft == 1 && std::fabs(m.x - fist.x) < 44 && std::fabs(m.y + 28 - fist.y) < 38) {
+            m.raft = 2; m.vy = 0;
+            fist.returning = true;
+            burst(m.x, m.y - 6, 8, 0x62d86f, 200, 0, 6);
+        }
     }
     for (auto& o : orbs)
         if (!o.taken && std::fabs(o.x - fist.x) < 24 && std::fabs(o.y - fist.y) < 24) takeOrb(o);
 }
 
 void Game::stepEnemies(float dt) {
+    bool bear = level == 2;
     for (auto& e : enemies) {
         if (!e.alive) continue;
         e.t += dt;
+        e.hitT = std::max(0.f, e.hitT - dt);
         float cy, hw, hh;
-        if (e.type == 0) {  // walker: patrol, turn at walls and ledges
-            e.x += e.vx * dt;
+        if (e.type == 0) {  // walker: patrol, turn at walls, ledges, slopes and water
+            if (e.hitT < 0.35f) e.x += e.vx * dt;
             float sign = e.vx > 0 ? 1.f : -1.f;
-            int tx = int(std::floor((e.x + sign * 20) / TILE)), ty = int(std::floor(e.y / TILE));
+            int tx = int(std::floor((e.x + sign * (bear ? 30 : 20)) / TILE)), ty = int(std::floor(e.y / TILE));
             bool floorAhead = solid(tx, ty) || at(tx, ty) == '=';
-            if (solid(tx, ty - 1) || !floorAhead || at(tx, ty - 1) == '^') e.vx = -e.vx;
-            cy = e.y - 18; hw = 19; hh = 17;
+            char ahead = at(tx, ty - 1);
+            if (solid(tx, ty - 1) || !floorAhead || ahead == '^' || ahead == '/' || ahead == '\\') e.vx = -e.vx;
+            cy = e.y - (bear ? 22 : 18); hw = bear ? 25 : 19; hh = bear ? 22 : 17;
         } else {  // flyer: hover back and forth
             e.x = e.x0 + std::sin(e.t * 1.1f) * 110;
             e.y = e.y0 + std::sin(e.t * 2.6f) * 16;
             cy = e.y; hw = 15; hh = 13;
         }
-        if (p.dead) continue;
+        if (p.dead || e.hitT > 0) continue;  // a reeling enemy cannot hurt you
         bool overlap = std::fabs(p.x - e.x) < PLAYER_HALF_W + hw && p.y > cy - hh && p.y - PLAYER_H < cy + hh;
         if (!overlap) continue;
         if (p.vy > 100 && p.prevY <= cy - hh + 18) {  // stomp
-            killEnemy(e);
+            hitEnemy(e);
             p.vy = -620; p.jumping = true; p.squash = -0.5f;
         } else {
             hurt(e.x);
@@ -391,6 +492,24 @@ void Game::stepCamera(float dt, bool snap) {
     camY += (ty - camY) * std::min(1.f, 5 * dt);
 }
 
+// A short tip that depends on where the player is.
+const char* Game::hint() const {
+    if (state != PLAY || p.dead) return nullptr;
+    for (const Mover& m : movers) {
+        if (!m.raft || p.x > m.endX + 40) continue;
+        if (m.raft == 1) return "X: punch the hanging guava so it drops into the river";
+        return "Hop on the guava and ride it across - do not fall in!";
+    }
+    if (p.onLiana >= 0) return "Up / Down: climb      Space + direction: leap off";
+    for (const Liana& l : lianas)
+        if (std::fabs(l.x - p.x) < 260 && p.y > l.y0 && p.y < l.y1 + 140) return "Jump onto the liana to grab it";
+    if (playTime < 9) {
+        if (level == 0) return "Arrows / A D: move      Space: jump, hold to glide      X: punch";
+        if (level == 2) return "Careful, the ice is slippery!      Polar bears need two hits";
+    }
+    return nullptr;
+}
+
 void Game::update(const Input& in, float dt) {
     time += dt; stateT += dt;
     shake = std::max(0.f, shake - dt);
@@ -404,8 +523,21 @@ void Game::update(const Input& in, float dt) {
     particles.erase(std::remove_if(particles.begin(), particles.end(),
                                    [](const Particle& q) { return q.life <= 0; }), particles.end());
 
-    for (auto& m : movers) {
+    for (size_t i = 0; i < movers.size(); i++) {
+        Mover& m = movers[i];
         m.prevX = m.x; m.prevY = m.y; m.phase += dt;
+        if (m.raft) {
+            if (m.raft == 2) {  // falling into the water
+                m.vy += 1500 * dt; m.y += m.vy * dt;
+                if (m.y >= m.floatY) {
+                    m.y = m.floatY; m.raft = 3; m.phase = 0;
+                    burst(m.x, m.floatY + WATER_TOP, 18, 0x9fe8ff, 300, 0, 7);
+                }
+            } else if (m.raft == 3 && p.onMover == int(i) && !p.dead) {
+                m.x = std::min(m.endX, m.x + 95 * dt);  // drifts across while you ride
+            }
+            continue;
+        }
         float k = 0.5f - 0.5f * std::cos(m.phase * 0.95f);  // ease in and out at both ends
         m.x = m.ax + (m.bx - m.ax) * k;
         m.y = m.ay + (m.by - m.ay) * k;

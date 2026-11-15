@@ -14,6 +14,7 @@ struct Theme {
     int grass0, grass1, grassHi;
     int plank0, plank1, plankHi, plankLine;
     int thorn0, thorn1, thornHi;
+    int water0, water1, waterHi;
 };
 const Theme& theme(const Game& g);
 
@@ -27,11 +28,14 @@ void drawDecor(const Game& g, const Decor& d);
 void drawTerrain(const Game& g, int tx0, int tx1, int ty0, int ty1);
 void drawPlanks(const Game& g, int tx0, int tx1, int ty0, int ty1);
 void drawThorns(const Game& g, int tx0, int tx1, int ty0, int ty1);
+void drawWater(const Game& g, int tx0, int tx1, int ty0, int ty1);
+void drawBridge(const Game& g, const Bridge& b);
 
 // actors.cpp: things that move or can be touched
 void drawBouncer(const Game& g, const Bouncer& b);
 void drawMover(const Game& g, const Mover& m, int index);
 void drawLiana(const Game& g, const Liana& l);
+void drawFishingBoat(float x, float y, float scale, bool cabin);  // x,y = middle of the deck
 void drawCheckpoint(const Checkpoint& c, float t);
 void drawGoal(const Game& g);
 void drawOrb(float x, float y, float t, float phase);

@@ -23,19 +23,14 @@ static void drawHud(const Game& g) {
         }
     }
     const char* keys = "Arrows / A D: move      Space: jump, hold to glide      X: punch";
-    if (g.state == Game::PLAY && g.playTime < 9) {
-        g_alpha(std::min(1.f, 9 - g.playTime));
-        g_text(g.lianas.empty() ? keys : "Jump onto a liana to grab it      Up / Down: climb      Space: leap off",
-               VIEW_W / 2, VIEW_H - 22, 19, 1, 0xffffff, INK, 5);
-        g_alpha(1);
-    }
+    if (const char* tip = g.hint()) g_text(tip, VIEW_W / 2, VIEW_H - 22, 19, 1, 0xffffff, INK, 5);
     if (g.state == Game::PLAY && g.playTime < 3.2f) {  // level name card
         float k = std::min(1.f, g.playTime * 3) * std::min(1.f, (3.2f - g.playTime) * 2);
         g_alpha(k);
         std::snprintf(buf, sizeof buf, "Level %d", g.level + 1);
         g_text(buf, VIEW_W / 2, 150 - (1 - k) * 20, 30, 1, 0xffffff, INK, 6);
         g_text(g.name.c_str(), VIEW_W / 2, 215 - (1 - k) * 20, 70, 1, INK, INK, 18);
-        g_text(g.name.c_str(), VIEW_W / 2, 211 - (1 - k) * 20, 70, 1, g.level == 0 ? 0xd68fe8 : 0xffd447, INK, 10);
+        g_text(g.name.c_str(), VIEW_W / 2, 211 - (1 - k) * 20, 70, 1, g.level == 0 ? 0xd68fe8 : (g.level == 1 ? 0xffd447 : 0x9fe8ff), INK, 10);
         g_alpha(1);
     }
     if (g.state == Game::TITLE) {
@@ -47,7 +42,7 @@ static void drawHud(const Game& g) {
         g_restore();
         if (std::fmod(t, 1.2f) < 0.8f)
             g_text("Press SPACE or tap to start", VIEW_W / 2, 340, 28, 1, 0xffffff, INK, 6);
-        g_text("Press 1 or 2 to pick a level", VIEW_W / 2, 378, 18, 1, 0xffffff, INK, 5);
+        g_text("Press 1, 2 or 3 to pick a level", VIEW_W / 2, 378, 18, 1, 0xffffff, INK, 5);
         g_text(keys, VIEW_W / 2, VIEW_H - 22, 19, 1, 0xffffff, INK, 5);
     }
     if (g.state == Game::WIN) {
@@ -92,11 +87,13 @@ void render(const Game& g) {
     for (auto& b : g.bouncers) if (visible(b.x, b.y)) drawBouncer(g, b);
     drawPlanks(g, tx0, tx1, ty0, ty1);
     for (auto& l : g.lianas) if (visible(l.x, l.y0, 500)) drawLiana(g, l);
-    for (size_t i = 0; i < g.movers.size(); i++) if (visible(g.movers[i].x, g.movers[i].y)) drawMover(g, g.movers[i], int(i));
+    for (auto& b : g.bridges) if (visible((b.x0 + b.x1) / 2, b.y, 500)) drawBridge(g, b);
+    for (size_t i = 0; i < g.movers.size(); i++) if (visible(g.movers[i].x, g.movers[i].y, 260)) drawMover(g, g.movers[i], int(i));
     for (auto& o : g.orbs) if (!o.taken && visible(o.x, o.y)) drawOrb(o.x, o.y, t, o.phase);
     for (auto& e : g.enemies) if (e.alive && visible(e.x, e.y)) drawEnemy(g, e);
     drawEmma(g);
     drawFist(g);
+    drawWater(g, tx0, tx1, ty0, ty1);
 
     for (auto& q : g.particles) {
         float k = q.life / q.maxLife;

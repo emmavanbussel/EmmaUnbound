@@ -74,34 +74,84 @@ static void drawCloudPlatform(const Mover& m, float t) {
     g_restore();
 }
 
-// A big floating fruit you can ride. Its leaves flap like little wings.
-static void drawFruitPlatform(const Mover& m, float t, int index) {
-    static const int skins[][3] = {{0xffe05a, 0xff7a2e, 0xff5d3d}, {0xd3f06a, 0x5fb83a, 0xff8fa8}, {0xffa3c0, 0xe0447a, 0xffe05a}};
-    const int* c = skins[index % 3];
-    float hw = m.w / 2, flap = std::sin(t * 11 + index * 2) * 0.4f;
+// A big guava you can ride. Flying ones flap two leaves like wings; the raft hangs from its tree until
+// it is punched loose, then floats in the river.
+static void drawGuava(const Mover& m, float t, int index) {
+    float hw = m.w / 2;
+    bool ripe = index % 2 == 0;
     g_save(); g_translate(m.x, m.y);
-    for (int side = -1; side <= 1; side += 2) {
-        g_save(); g_translate(side * (hw - 10), 12); g_scale(side, 1); g_rotate(-0.55f + flap);
-        g_path(); g_move(0, 0); g_quad(20, -20, 44, -6); g_quad(22, 10, 0, 0); g_close();
+    if (m.raft == 1 || m.raft == 2) {  // stem up to the branch
+        float branch = m.floatY - 150 - m.y;
+        if (m.raft == 1) {
+            g_stroke(INK, 6); g_path(); g_move(0, branch); g_line(0, 2); g_paint(STROKE);
+            g_stroke(0x8a5a36, 3); g_paint(STROKE);
+        }
+        g_save(); g_translate(4, 0); g_rotate(-0.5f + std::sin(t * 3) * 0.08f);
+        g_path(); g_move(0, 0); g_quad(16, -18, 36, -8); g_quad(18, 6, 0, 0); g_close();
         g_fill(0x62d86f); g_stroke(INK, 3); g_paint(BOTH);
-        g_stroke(0x2f9a4a, 2); g_path(); g_move(4, -1); g_line(34, -6); g_paint(STROKE);
         g_restore();
+    } else if (!m.raft) {
+        float flap = std::sin(t * 11 + index * 2) * 0.4f;
+        for (int side = -1; side <= 1; side += 2) {
+            g_save(); g_translate(side * (hw - 10), 12); g_scale(side, 1); g_rotate(-0.55f + flap);
+            g_path(); g_move(0, 0); g_quad(20, -20, 44, -6); g_quad(22, 10, 0, 0); g_close();
+            g_fill(0x62d86f); g_stroke(INK, 3); g_paint(BOTH);
+            g_stroke(0x2f9a4a, 2); g_path(); g_move(4, -1); g_line(34, -6); g_paint(STROKE);
+            g_restore();
+        }
     }
-    g_lin(0, 0, 0, 62, c[0], c[1]); g_stroke(INK, 3.5);
-    g_path(); g_move(-hw + 8, 6);
-    g_quad(-hw + 14, -1, -hw + 30, -1); g_line(hw - 30, -1); g_quad(hw - 14, -1, hw - 8, 6);
-    g_cubic(hw + 6, 30, hw - 16, 62, 0, 62);
-    g_cubic(-hw + 16, 62, -hw - 6, 30, -hw + 8, 6);
+    // body: yellow-green skin, a little wider at the bottom
+    if (ripe) g_lin(0, 0, 0, 62, 0xf6f590, 0xb4d84f); else g_lin(0, 0, 0, 62, 0xdff07c, 0x86c240);
+    g_stroke(INK, 3.5);
+    g_path(); g_move(-hw + 10, 6);
+    g_quad(-hw + 15, -1, -hw + 32, -1); g_line(hw - 32, -1); g_quad(hw - 15, -1, hw - 10, 6);
+    g_cubic(hw + 9, 28, hw - 8, 62, 0, 62);
+    g_cubic(-hw + 8, 62, -hw - 9, 28, -hw + 10, 6);
     g_close(); g_paint(BOTH);
-    g_alpha(0.5); g_fill(0xffffff); g_ellipse(-hw * 0.45f, 14, 13, 6, -0.35, FILL); g_alpha(1);
-    g_alpha(0.45); g_fill(c[2]); g_circle(-20, 36, 6, FILL); g_circle(20, 36, 6, FILL); g_alpha(1);
+    g_alpha(0.55); g_fill(0xffffff); g_ellipse(-hw * 0.45f, 13, 13, 6, -0.35, FILL);
+    g_alpha(0.5); g_fill(0x8fb53c);  // freckles
+    static const float dots[][2] = {{-30, 30}, {-36, 44}, {31, 26}, {36, 42}, {-16, 52}, {20, 53}, {0, 12}, {28, 12}};
+    for (auto& d : dots) g_circle(d[0], d[1], 1.8, FILL);
+    g_alpha(0.5); g_fill(0xff9db5); g_circle(-21, 37, 6, FILL); g_circle(21, 37, 6, FILL);
+    g_alpha(1);
     g_fill(INK); g_ellipse(-9, 28, 2.8, 4, 0, FILL); g_ellipse(9, 28, 2.8, 4, 0, FILL);
-    g_stroke(INK, 2.5); g_path(); g_move(-6, 37); g_quad(0, 43, 6, 37); g_paint(STROKE);
+    g_stroke(INK, 2.5); g_path(); g_move(-6, 38); g_quad(0, 44, 6, 38); g_paint(STROKE);
+    // the little crown at the bottom of every guava
+    g_fill(0x6b5a2e); g_stroke(INK, 2); starPath(0, 61, 7.5, 3.2, PI, 5); g_paint(BOTH);
+    g_restore();
+}
+
+// A small fishing boat. x,y is the middle of the deck (the top edge of the hull).
+void drawFishingBoat(float x, float y, float scale, bool cabin) {
+    const float hw = 75;
+    g_save(); g_translate(x, y); g_scale(scale, scale);
+    g_stroke(INK, 3.5);
+    // mast and flag
+    g_fill(0xb98a5a); g_rrect(-hw + 54, -92, 6, 94, 2, BOTH);
+    g_fill(0xd9483b); g_stroke(INK, 2.5); g_rrect(-hw + 60, -92, 30, 20, 2, BOTH);
+    g_fill(0xffffff); g_rect(-hw + 68, -91, 7, 18); g_rect(-hw + 61, -85.5, 28, 7);
+    g_fill(0x2f4f9f); g_rect(-hw + 70, -91, 3, 18); g_rect(-hw + 61, -83.5, 28, 3);
+    g_stroke(INK, 3.5);
+    if (cabin) {  // wheelhouse at the stern
+        g_fill(0xfdf8ee); g_rrect(-hw + 4, -36, 42, 38, 4, BOTH);
+        g_fill(0x8fd6f0); g_stroke(INK, 2.5); g_rrect(-hw + 12, -28, 16, 13, 3, BOTH);
+        g_stroke(INK, 3.5); g_fill(0x3f6fae); g_rrect(-hw, -43, 50, 10, 4, BOTH);
+        g_fill(0xffffff); g_rrect(-hw + 4, -46, 42, 5, 2.5, FILL);
+    }
+    // hull
+    g_lin(0, 0, 0, 84, 0xe2503f, 0xb5332a);
+    g_path(); g_move(-hw - 10, 0); g_line(hw + 16, 0); g_quad(hw + 6, 48, hw - 28, 84); g_line(-hw + 14, 84); g_quad(-hw - 6, 48, -hw - 10, 0); g_close(); g_paint(BOTH);
+    g_fill(0xfdf8ee); g_stroke(INK, 2.5);
+    g_path(); g_move(-hw - 9, 1); g_line(hw + 15, 1); g_line(hw + 11, 16); g_line(-hw - 7, 16); g_close(); g_paint(BOTH);
+    g_fill(0xf2c94c); g_circle(hw - 12, 30, 5, BOTH);
+    g_text("EMMA", 4, 42, 15, 1, 0xfdf8ee, INK, 0);
     g_restore();
 }
 
 void drawMover(const Game& g, const Mover& m, int index) {
-    if (g.level == 0) drawCloudPlatform(m, g.time); else drawFruitPlatform(m, g.time, index);
+    if (g.level == 0) drawCloudPlatform(m, g.time);
+    else if (g.level == 1) drawGuava(m, g.time, index);
+    else drawFishingBoat(m.x, m.y, 1, true);
 }
 
 void drawLiana(const Game& g, const Liana& l) {
@@ -246,12 +296,63 @@ static void drawCrab(const Enemy& e) {
     g_stroke(INK, 2.2); g_path(); g_move(-5, -10); g_quad(0, -13, 5, -10); g_paint(STROKE);
 }
 
+static void drawPolarBear(const Enemy& e) {
+    bool angry = e.hp < 2;
+    float w = std::sin(e.t * (angry ? 12 : 7)), bobY = -std::fabs(w) * 1.8f;
+    const int FUR = 0xf7fafd, SHADE = 0xd3deeb;
+    g_translate(-9, 0);
+    g_stroke(INK, 3);
+    g_fill(FUR); g_circle(-31, -32 + bobY, 6, BOTH);  // tail
+    g_fill(SHADE);
+    g_rrect(-23 + w * 6, -17, 12, 19, 5, BOTH); g_rrect(11 - w * 6, -17, 12, 19, 5, BOTH);
+    g_lin(0, -48, 0, -10, FUR, SHADE); g_ellipse(-1, -29 + bobY, 31, 19, 0, BOTH);
+    g_fill(FUR);
+    g_rrect(-15 - w * 6, -17, 12, 19, 5, BOTH); g_rrect(19 + w * 6, -17, 12, 19, 5, BOTH);
+    // head
+    float hy = bobY * 1.4f;
+    g_fill(FUR); g_circle(20, -51 + hy, 6, BOTH); g_circle(35, -52 + hy, 6, BOTH);
+    g_fill(0xffc2cf); g_circle(20, -51 + hy, 2.6, FILL); g_circle(35, -52 + hy, 2.6, FILL);
+    g_fill(FUR); g_circle(29, -38 + hy, 15, BOTH);
+    g_ellipse(41, -33 + hy, 10, 7.5, 0, BOTH);
+    g_fill(INK); g_ellipse(49, -35.5f + hy, 3.6, 3, 0, FILL);
+    g_circle(32, -41 + hy, 2.4, FILL);
+    if (angry) {  // one knock in: furious
+        g_alpha(0.55); g_fill(0xff6b6b); g_circle(26, -33 + hy, 5, FILL); g_alpha(1);
+        g_stroke(INK, 3.2); g_path(); g_move(26, -48 + hy); g_line(37, -43.5f + hy); g_paint(STROKE);
+        g_fill(0xb3304f); g_stroke(INK, 2); g_path(); g_move(36, -31 + hy); g_quad(43, -22 + hy, 49, -30 + hy); g_close(); g_paint(BOTH);
+        g_fill(0xffffff); g_path(); g_move(39, -30 + hy); g_line(41, -26 + hy); g_line(43, -30 + hy); g_close(); g_paint(FILL);
+    } else {
+        g_stroke(INK, 2.6); g_path(); g_move(27, -46.5f + hy); g_line(36, -44 + hy); g_paint(STROKE);
+        g_stroke(INK, 2); g_path(); g_move(38, -29 + hy); g_quad(43, -26 + hy, 48, -30 + hy); g_paint(STROKE);
+    }
+}
+
+static void drawGull(const Enemy& e) {
+    float f = std::sin(e.t * 13);
+    g_stroke(INK, 2.5);
+    g_fill(0xf7fafd); g_path(); g_move(-13, 0); g_line(-25, -5); g_line(-23, 5); g_close(); g_paint(BOTH);  // tail
+    g_lin(0, -10, 0, 10, 0xffffff, 0xd3deeb); g_ellipse(0, 0, 16, 10.5, 0, BOTH);
+    g_fill(0xf2a81d); g_path(); g_move(17, -8); g_line(29, -4); g_line(17, -1); g_close(); g_paint(BOTH);
+    g_fill(0xffffff); g_circle(12, -6, 7.5, BOTH);
+    g_fill(INK); g_circle(14.5f, -7, 1.9f, FILL);
+    g_stroke(INK, 2.6); g_path(); g_move(9, -12); g_line(17, -9.5f); g_paint(STROKE);
+    // wing
+    g_stroke(INK, 2.5); g_fill(0xb9c4d6);
+    g_path(); g_move(-10, -2); g_quad(-8, -8 - 24 * f, 6, -6 - 26 * f); g_quad(4, -4, 7, -1); g_close(); g_paint(BOTH);
+    g_fill(INK); g_circle(5, -6 - 24 * f, 2.6, FILL);
+}
+
 void drawEnemy(const Game& g, const Enemy& e) {
+    if (e.hitT > 0 && std::fmod(e.hitT, 0.14f) < 0.07f) g_alpha(0.45);
     g_save(); g_translate(e.x, e.y);
     if (e.type == 0) {
         if (g.level == 0) { g_scale(e.vx > 0 ? 1 : -1, 1); drawWolf(e); }
-        else drawCrab(e);
-    } else {  // flyer: a wasp in Heidestein, an emerald beetle in Vinales
+        else if (g.level == 1) drawCrab(e);
+        else { g_scale(e.vx > 0 ? 1 : -1, 1); if (e.hitT > 0.35f) g_rotate(-0.12f); drawPolarBear(e); }
+    } else if (g.level == 2) {
+        g_scale(std::cos(e.t * 1.1f) > 0 ? 1 : -1, 1);
+        drawGull(e);
+    } else {  // a wasp in Heidestein, an emerald beetle in Vinales
         bool wasp = g.level == 0;
         g_scale(std::cos(e.t * 1.1f) > 0 ? 1 : -1, 1);
         float flap = std::fabs(std::sin(e.t * 26));
@@ -270,6 +371,7 @@ void drawEnemy(const Game& g, const Enemy& e) {
         angryFace(1, -2, 0.85f);
     }
     g_restore();
+    g_alpha(1);
 }
 
 static void drawGlove(float x, float y, float r) {
