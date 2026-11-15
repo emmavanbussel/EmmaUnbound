@@ -490,8 +490,41 @@ static void drawTobaccoPlant(float x, float y, uint32_t h, float t) {
 }
 
 // Heidestein: a roe deer. It turns to watch Emma when she comes close.
+// Bolting: a flat-out gallop to the right, legs gathering and stretching, white tail up.
+static void drawDeerRunning(const Decor& d) {
+    const int FUR = 0xc98c52, DARK = 0xa56c3c;
+    float ph = d.t * 13, s = std::sin(ph), reach = 0.35f + 0.65f * d.lift;   // fully stretched in mid-leap
+    float hop = -std::fabs(std::sin(ph * 0.5f)) * 16 - d.lift * 34;
+    g_save(); g_translate(d.x, d.y + hop); g_rotate(-0.10f - d.lift * 0.1f + s * 0.05f);
+    auto leg = [&](float x0, float swing, int col) {
+        g_path(); g_move(x0, -32); g_line(x0 + swing * 12, -17); g_line(x0 + swing * 26, -4 + std::fabs(swing) * 4);
+        g_stroke(INK, 7); g_paint(STROKE); g_stroke(col, 3.6); g_paint(STROKE);
+    };
+    float f = std::max(s, reach), b = -std::max(-s * 0.2f + reach, reach);
+    leg(-15, b * 0.8f, DARK); leg(13, f * 0.8f, DARK);
+    g_stroke(INK, 3);
+    g_fill(0xfaf3e3); g_ellipse(-23, -42, 7, 9, 0, BOTH);
+    g_path(); g_move(-24, -48); g_line(-31, -58); g_line(-21, -52); g_close(); g_paint(BOTH);   // tail up
+    g_lin(0, -50, 0, -24, 0xd9a063, 0xb57a45); g_ellipse(-1, -37, 25, 12.5, 0, BOTH);
+    g_fill(0xe9c79a); g_ellipse(2, -29, 13, 4, 0, FILL);
+    leg(-11, b, FUR); leg(18, f, FUR);
+    g_save(); g_translate(17, -42); g_rotate(0.35f);
+    g_stroke(INK, 3); g_fill(FUR);
+    g_path(); g_move(-6, -2); g_quad(2, -16, 4, -30); g_line(14, -26); g_quad(12, -10, 8, 6); g_close(); g_paint(BOTH);
+    g_fill(DARK); g_ellipse(2, -38, 4, 9, -1.1f, BOTH);
+    g_stroke(INK, 5); g_path(); g_move(9, -36); g_line(6, -49); g_move(8, -43); g_line(12, -49); g_paint(STROKE);
+    g_stroke(0x8f7355, 2.2); g_paint(STROKE);
+    g_stroke(INK, 3); g_fill(FUR); g_ellipse(8, -40, 4, 9, -0.8f, BOTH);
+    g_ellipse(12, -29, 9.5, 7.5, -0.15, BOTH);
+    g_fill(0xe9c79a); g_ellipse(20, -26, 6.5, 4.8, 0.1, BOTH);
+    g_fill(INK); g_circle(25, -26.5, 2.3, FILL); g_circle(14, -31.5, 2.3, FILL);
+    g_fill(0xffffff); g_circle(14.6, -32.2, 0.8, FILL);
+    g_restore();
+    g_restore();
+}
+
 static void drawDeer(float x, float y, float t, float playerX, uint32_t h) {
-    bool alert = std::fabs(playerX - x) < 230;
+    bool alert = std::fabs(playerX - x) < 330;
     float dir = alert ? (playerX > x ? 1.f : -1.f) : (h % 2 ? 1.f : -1.f);
     const int FUR = 0xc98c52, DARK = 0xa56c3c;
     g_save(); g_translate(x, y); g_scale(dir, 1);
@@ -520,6 +553,92 @@ static void drawDeer(float x, float y, float t, float playerX, uint32_t h) {
     g_fill(INK); g_circle(25, -26.5, 2.3, FILL); g_circle(14, -31.5, 2, FILL);
     g_fill(0xffffff); g_circle(14.6, -32.2, 0.7, FILL);
     g_restore();
+    g_restore();
+}
+
+// Heidestein: a Scots pine whose roots stand clear of the sand, as on the drifting dunes.
+static void drawRootPine(float x, float y, uint32_t h) {
+    const int BARK = 0x9a7458, BARK_L = 0xc49a74, ROOT = 0x8d7a66;
+    float lean = (int(h % 30) - 15) * 0.6f;
+    g_save(); g_translate(x, y);
+    // crown: flat, irregular clumps high up
+    static const float crown[][3] = {{-46, -268, 30}, {-8, -292, 36}, {36, -280, 32}, {70, -262, 24}, {-70, -250, 20}, {10, -258, 30}};
+    g_fill(0x1f4d40);
+    for (auto& c : crown) g_circle(c[0] + lean, c[1], c[2] + 3.5f, FILL);
+    for (auto& c : crown) { g_fill(0x3d8f68); g_circle(c[0] + lean, c[1], c[2], FILL); }
+    g_fill(0x5fb486);
+    for (auto& c : crown) g_circle(c[0] + lean - c[2] * 0.25f, c[1] - c[2] * 0.3f, c[2] * 0.45f, FILL);
+    auto limb = [](float x0, float y0, float cx, float cy, float x1, float y1, float w, int col) {
+        g_path(); g_move(x0, y0); g_quad(cx, cy, x1, y1);
+        g_stroke(INK, w + 5); g_paint(STROKE); g_stroke(col, w); g_paint(STROKE);
+    };
+    limb(lean * 0.8f, -210, lean - 30, -232, lean - 44, -250, 5, BARK);
+    limb(lean * 0.8f, -200, lean + 34, -224, lean + 50, -256, 5, BARK);
+    // roots behind the trunk
+    limb(-4, -58, -70, -70, -128, -2, 6, ROOT);
+    limb(6, -56, 60, -84, 132, -4, 6, ROOT);
+    limb(-2, -44, -30, -6, -74, 2, 5, ROOT);
+    // trunk: thick at the foot, red-brown and bare all the way up
+    g_path(); g_move(-17, -44); g_quad(-8, -150, lean - 7, -262); g_line(lean + 7, -262); g_quad(10, -150, 17, -44); g_close();
+    g_lin(0, -262, 0, -44, BARK_L, BARK); g_stroke(INK, 3.5); g_paint(BOTH);
+    g_stroke(0x6f5340, 2);
+    for (int i = 0; i < 7; i++) { float py = -70 - i * 27; g_path(); g_move(-5 + (i % 2) * 6, py); g_line(-3 + (i % 2) * 6, py - 12); g_paint(STROKE); }
+    // roots in front: arching out, crossing, with dangling rootlets
+    limb(-12, -50, -52, -44, -96, 2, 7, ROOT);
+    limb(12, -50, 44, -40, 92, 2, 7, ROOT);
+    limb(-6, -46, -16, -14, -40, 3, 6, ROOT);
+    limb(6, -46, 22, -18, 48, 3, 6, ROOT);
+    limb(0, -44, 2, -20, -6, 3, 5, ROOT);
+    limb(-58, -36, -42, -22, -56, 2, 3.5f, ROOT);
+    limb(58, -32, 70, -36, 112, -30, 3.5f, ROOT);
+    limb(-88, -22, -100, -30, -136, -26, 3, ROOT);
+    limb(96, -28, 100, -14, 96, -4, 2.5f, ROOT);
+    limb(-112, -27, -114, -16, -110, -8, 2.5f, ROOT);
+    g_fill(0xf3e4bb); g_stroke(INK, 2.5);                       // a little sand heaped against the foot
+    g_path(); g_move(-26, 4); g_quad(0, -12, 28, 4); g_close(); g_paint(BOTH);
+    g_restore();
+}
+
+// Heidestein's Theehuis: a white lower storey, a dark timber upper storey with a balcony and a red parasol,
+// on a wooded mound above the lake, with the little white battlemented gate below it.
+static void drawTheehuis(float x, float y) {
+    g_save(); g_translate(x, y);
+    g_stroke(INK, 3.5);
+    // the mound
+    g_path(); g_move(-150, 4); g_quad(-110, -44, -50, -46); g_line(56, -46); g_quad(92, -40, 150, 4); g_close();
+    g_lin(0, -46, 0, 4, 0x86b860, 0x5f8f48); g_paint(BOTH);
+    g_stroke(0x4f7a3c, 2); g_path(); g_move(-96, -22); g_quad(-88, -30, -80, -22); g_move(-36, -30); g_quad(-28, -38, -20, -30); g_move(84, -18); g_quad(92, -26, 100, -18); g_paint(STROKE);
+    g_stroke(INK, 2.5); g_fill(0xb9b3a6);                       // steps up the mound
+    for (int i = 0; i < 5; i++) g_rrect(-104 + i * 11, -6 - i * 8, 18, 6, 2, BOTH);
+    // white lower storey
+    g_stroke(INK, 3.5);
+    g_lin(0, -112, 0, -46, 0xfaf7ef, 0xdcd6c8); g_rrect(-46, -112, 92, 68, 2, BOTH);
+    g_fill(0x6f6a66); g_rect(-45, -54, 90, 9);
+    g_fill(0x2f2a35); g_stroke(INK, 2.5); g_rrect(8, -98, 20, 26, 2, BOTH); g_rrect(-34, -84, 14, 38, 2, BOTH);
+    // dark timber upper storey, open to the balcony
+    g_stroke(INK, 3.5);
+    g_fill(0x4e3d33); g_rrect(-54, -168, 108, 58, 2, BOTH);
+    g_fill(0x2f2622); g_rect(-46, -160, 92, 30);
+    g_stroke(0x4e3d33, 5); g_path(); g_move(-16, -160); g_line(-16, -130); g_move(18, -160); g_line(18, -130); g_paint(STROKE);
+    g_fill(0xd9483b); g_stroke(INK, 2.2);                       // the red parasol, folded
+    g_path(); g_move(2, -164); g_quad(9, -146, 5, -128); g_line(-1, -128); g_quad(-5, -146, 2, -164); g_close(); g_paint(BOTH);
+    g_stroke(INK, 3); g_fill(0x3d2f28); g_rrect(-60, -132, 120, 24, 3, BOTH);       // balcony
+    g_stroke(0x6b574a, 2);
+    for (int i = -5; i <= 5; i++) { g_path(); g_move(i * 10.5f - 4, -128); g_line(i * 10.5f + 4, -112); g_move(i * 10.5f + 4, -128); g_line(i * 10.5f - 4, -112); g_paint(STROKE); }
+    // roof and chimney
+    g_stroke(INK, 3.5);
+    g_fill(0xe9e4d8); g_rrect(30, -214, 11, 26, 2, BOTH);
+    g_path(); g_move(-68, -166); g_line(-44, -204); g_line(44, -204); g_line(68, -166); g_close();
+    g_lin(0, -204, 0, -166, 0xa39a8c, 0x7a7166); g_paint(BOTH);
+    g_stroke(0x5f574e, 2); g_path(); g_move(-52, -178); g_line(52, -178); g_move(-46, -190); g_line(46, -190); g_paint(STROKE);
+    // the white gate with battlements, at the foot of the mound towards the water
+    g_stroke(INK, 3.5);
+    g_path(); g_move(58, 3); g_line(72, -52); g_line(72, -64); g_line(84, -64); g_line(84, -56); g_line(94, -56); g_line(94, -64);
+    g_line(106, -64); g_line(106, -56); g_line(116, -56); g_line(116, -64); g_line(128, -64); g_line(128, -52); g_line(142, 3); g_close();
+    g_lin(0, -64, 0, 0, 0xfaf7ef, 0xd6d0c2); g_paint(BOTH);
+    g_fill(0x2f2a35); g_stroke(INK, 3); g_path(); g_move(86, 3); g_line(86, -24); g_quad(100, -44, 114, -24); g_line(114, 3); g_close(); g_paint(BOTH);
+    g_stroke(0x8a8f96, 1.8);
+    for (int i = 0; i < 4; i++) { g_path(); g_move(91 + i * 6, 1); g_line(91 + i * 6, -28); g_paint(STROKE); }
     g_restore();
 }
 
@@ -790,7 +909,12 @@ void drawDecor(const Game& g, const Decor& d) {
         case 'H': drawSign(d.x, d.y, g.name.c_str()); break;
         case 't': drawTobaccoPlant(d.x, d.y, h, t); break;
         case 'R': drawStockfishRack(d.x, d.y, t); break;
-        case 'D': drawDeer(d.x, d.y, t, g.p.x, h); break;
+        case 'D':
+            if (d.state == 0) drawDeer(d.x, d.y, t, g.p.x, h);
+            else if (d.state == 1) drawDeerRunning(d);
+            break;
+        case 'x': drawRootPine(d.x, d.y, h); break;
+        case 'h': drawTheehuis(d.x, d.y); break;
         case 'l': drawLog(d.x, d.y); break;
         case 'd': drawDeadTree(d.x, d.y); break;
         case 'k': drawBirch(d.x, d.y, t); break;

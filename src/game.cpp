@@ -43,7 +43,7 @@ void Game::load(int levelIndex) {
         for (const char* c = set; *c; c++) if (src[ty][tx] == *c) return true;
         return false;
     };
-    static const float moverWidths[] = {124.f, 110.f, 150.f};  // cloud, rope platform, fishing boat
+    static const float moverWidths[] = {150.f, 110.f, 150.f};  // floating pine, rope platform, fishing boat
     float moverW = moverWidths[level];
     int walkerHp = level == 2 ? 2 : 1;                         // polar bears take two hits
     float walkerSpeed = level == 2 ? 50.f : 60.f;
@@ -60,7 +60,7 @@ void Game::load(int levelIndex) {
                 case 'M': bouncers.push_back({cx, bottom, 0}); break;
                 case 'C': checkpoints.push_back({cx, bottom, false}); break;
                 case 'T': case 'S': case 'b': case 'H': case 't': case 'R': case 'D': case 'l': case 'd':
-                case 'k': case 'c': case 'j': case 'p': case 'U':
+                case 'k': case 'c': case 'j': case 'p': case 'U': case 'x': case 'h':
                     decor.push_back({c, cx, bottom}); break;
                 case 'B': case 'r': decor.push_back({c, cx, bottom}); c = 'w'; continue;  // these sit in water
                 case 'f': fogs.push_back(cx); break;
@@ -72,6 +72,7 @@ void Game::load(int levelIndex) {
                         if (n == 1) movers.push_back({cx - 74, y, cx + 74, y, moverW, cx, y, cx, y, tx * 1.f});
                         else movers.push_back({cx, y, cx + (n - 1) * TILE, y, moverW, cx, y, cx, y, 0});
                     }
+                    if (is(tx, ty + 1, "w")) { c = 'w'; continue; }  // it floats: the water carries on underneath
                     break;
                 case ':': case ';':  // lift: rides up and down its column
                     if (c == ';') orbs.push_back({cx, mid, tx * 0.7f, false});
@@ -466,6 +467,26 @@ void Game::stepPickups() {
     }
 }
 
+// Deer are shy: when Emma comes close they bolt off to the right in long bounds, clearing whatever
+// is in the way, and are gone once they leave the screen.
+void Game::stepDeer(float dt) {
+    for (Decor& d : decor) {
+        if (d.kind != 'D' || d.state == 2) continue;
+        if (d.state == 0) {
+            if (!p.dead && std::fabs(p.x - d.x) < 210 && std::fabs(p.y - d.y) < 4 * TILE) { d.state = 1; d.t = 0; }
+            continue;
+        }
+        d.t += dt;
+        d.x += std::min(470.f, 150 + d.t * 520) * dt;
+        int tx = int(std::floor(d.x / TILE)), r = 0;
+        while (r < H && !solid(tx, r)) r++;
+        bool footing = r < H && at(tx, r - 1) != 'w' && at(tx, r - 1) != '^';
+        if (footing) d.y += (r * TILE - d.y) * std::min(1.f, 10 * dt);   // otherwise it is in mid-leap over a gap, water or thorns
+        d.lift += ((footing ? 0.f : 1.f) - d.lift) * std::min(1.f, 8 * dt);
+        if (d.x > camX + VIEW_W + 120 || d.x > W * TILE) d.state = 2;
+    }
+}
+
 void Game::stepCamera(float dt, bool snap) {
     lookAhead = snap ? 80.f * p.dir : approach(lookAhead, p.dir * 80.f, 220 * dt);
     float tx = p.x + lookAhead - VIEW_W / 2.f;
@@ -534,5 +555,6 @@ void Game::update(const Input& in, float dt) {
     stepFist(dt);
     stepEnemies(dt);
     stepPickups();
+    stepDeer(dt);
     stepCamera(dt, false);
 }

@@ -53,24 +53,33 @@ void drawBouncer(const Game& g, const Bouncer& m) {
     g_restore();
 }
 
-static void drawCloudPlatform(const Mover& m, float t) {
-    g_save(); g_translate(m.x, m.y + std::sin(t * 2.2f) * 1.5f);
-    float hw = m.w / 2;
-    g_stroke(INK, 3.5);
-    g_fill(0xcfe6ff);
-    g_path();
-    g_move(-hw + 10, 0); g_line(hw - 10, 0);
-    g_quad(hw + 6, 2, hw, 14);
-    g_quad(hw - 4, 30, hw - 26, 24);
-    g_quad(hw - 44, 40, 0 + 8, 28);
-    g_quad(-14, 42, -hw + 30, 26);
-    g_quad(-hw - 2, 30, -hw, 14);
-    g_quad(-hw - 6, 2, -hw + 10, 0);
-    g_close(); g_paint(BOTH);
-    g_fill(0xffffff); g_rrect(-hw + 6, 3, m.w - 12, 11, 5.5, FILL);
-    g_stroke(INK, 2.5);
-    g_path(); g_move(-16, 17); g_quad(-11, 21, -6, 17); g_move(6, 17); g_quad(11, 21, 16, 17); g_paint(STROKE);
-    g_alpha(0.5); g_fill(0xff9dbb); g_circle(-22, 21, 4, FILL); g_circle(22, 21, 4, FILL); g_alpha(1);
+// Heidestein: a fallen pine drifting on the lake. You ride on the trunk.
+static void drawFloatingPine(const Mover& m, float t) {
+    float hw = m.w / 2, bob = std::sin(t * 2) * 0.8f;
+    g_save(); g_translate(m.x, m.y);
+    // broken branches and the last green tuft at the crown end
+    auto stub = [](float x0, float y0, float x1, float y1, float w) {
+        g_path(); g_move(x0, y0); g_line(x1, y1);
+        g_stroke(INK, w + 4.5f); g_paint(STROKE); g_stroke(0x9a7458, w); g_paint(STROKE);
+    };
+    stub(hw - 30, 6, hw - 8, -22 + bob, 4.5f); stub(hw - 16, -10, hw + 8, -18 + bob, 3);
+    stub(-hw + 52, 6, -hw + 40, -16, 4); stub(8, 6, 18, -12, 3.5f);
+    static const float tuft[][3] = {{-10, -30, 13}, {6, -40, 12}, {20, -28, 12}};
+    g_fill(INK);
+    for (auto& c : tuft) g_circle(hw + c[0], c[1] + bob, c[2] + 3, FILL);
+    for (auto& c : tuft) { g_fill(0x3d8f68); g_circle(hw + c[0], c[1] + bob, c[2], FILL); }
+    g_fill(0x5fb486); g_circle(hw + 2, -43 + bob, 5, FILL); g_circle(hw - 13, -33 + bob, 5, FILL);
+    // the root plate at the other end
+    g_stroke(INK, 3); g_fill(0x8d7a66);
+    g_path(); g_move(-hw - 4, 4); g_line(-hw - 26, -22); g_line(-hw - 14, -8); g_line(-hw - 30, 2); g_line(-hw - 14, 10); g_line(-hw - 28, 26);
+    g_line(-hw - 10, 22); g_line(-hw - 16, 38); g_line(-hw + 6, 30); g_close(); g_paint(BOTH);
+    // trunk
+    g_lin(0, 0, 0, 36, 0xc99b72, 0x8f6a4e); g_stroke(INK, 3.5);
+    g_path(); g_move(-hw - 6, 5); g_quad(-hw - 6, -1, -hw + 6, -1); g_line(hw - 4, 0); g_quad(hw + 6, 4, hw + 6, 14);
+    g_quad(hw + 4, 28, hw - 8, 30); g_line(-hw + 4, 36); g_quad(-hw - 8, 34, -hw - 6, 5); g_close(); g_paint(BOTH);
+    g_stroke(0xe3bd94, 2.5); g_path(); g_move(-hw + 8, 4.5f); g_line(hw - 10, 5); g_paint(STROKE);
+    g_stroke(0x6f5340, 2);
+    for (float x = -hw + 16; x < hw - 14; x += 23) { g_path(); g_move(x, 13 + std::fmod(x + 200, 7.f)); g_line(x + 11, 13 + std::fmod(x + 200, 7.f)); g_move(x + 8, 22); g_line(x + 15, 22); g_paint(STROKE); }
     g_restore();
 }
 
@@ -147,7 +156,7 @@ void drawFishingBoat(float x, float y, float scale, bool cabin) {
 }
 
 void drawMover(const Game& g, const Mover& m, int index) {
-    if (g.level == 0) drawCloudPlatform(m, g.time);
+    if (g.level == 0) drawFloatingPine(m, g.time);
     else if (g.level == 1) drawRopePlatform(m, index);
     else drawFishingBoat(m.x, m.y, 1, true);
 }

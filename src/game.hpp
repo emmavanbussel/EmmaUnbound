@@ -58,7 +58,11 @@ inline float bridgeY(const Bridge& b, float x) {
 }
 struct Liana { float x, y0, y1; };
 struct Checkpoint { float x, y; bool active; };
-struct Decor { char kind; float x, y; };  // scenery, see the legend in level.hpp
+struct Decor {
+    char kind; float x, y;
+    // only the deer use these: 0 calm, 1 bolting to the right, 2 gone
+    int state = 0; float t = 0, lift = 0;
+};  // scenery, see the legend in level.hpp
 struct Particle { float x, y, vx, vy, grav, life, maxLife, size; int color; int kind; };  // kind 0 dot, 1 star
 
 inline float lianaSway(const Liana& l, float y, float t) {
@@ -106,6 +110,7 @@ private:
     void stepEnemies(float dt);
     void stepPickups();
     void stepCamera(float dt, bool snap);
+    void stepDeer(float dt);
     void hurt(float fromX);
     void die();
     void respawn();

@@ -34,11 +34,11 @@ m.sand(26, 44, 11)                                              # sandy plain wi
 m.plat(29, 32, 8)
 for x in (29, 30, 31, 32): m.put(x, 7, 'o')
 m.plat(35, 38, 5); m.put(36, 4, 'o'); m.put(37, 4, 'o')
-m.on(28, 'T'); m.on(31, 'D'); m.on(33, 'l'); m.on(35, 'E'); m.on(38, 'd'); m.on(40, '^'); m.on(41, '^'); m.on(43, 'T'); m.on(44, 'k')
-m.block(45, 50, 13, 14)                                         # small lake, crossed on the drifting cloud
+m.on(28, 'x'); m.on(31, 'D'); m.on(33, 'l'); m.on(35, 'E'); m.on(36, 'x'); m.on(38, 'd'); m.on(40, '^'); m.on(41, '^'); m.on(43, 'T'); m.on(44, 'k')
+m.block(45, 50, 13, 14)                                         # small lake, crossed on a floating fallen pine
 for x in range(45, 51): m.put(x, 12, 'w'); m.put(x, 11, 'w')
 m.g[11][45] = 'r'; m.g[11][50] = 'r'; m.put(47, 2, 'f')         # reeds; 'f' = fog hangs around here
-m.put(47, 10, '~')
+m.g[11][47] = '~'                                               # a fallen pine drifting on the lake
 for x in (46, 48, 49): m.put(x, 7, 'o')
 m.ground(51, 57, 11); m.ground(58, 70, 8)
 m.on(53, 'T'); m.on(56, 'M'); m.put(56, 6, 'o'); m.put(57, 5, 'o')
@@ -49,9 +49,9 @@ for x in range(73, 84): m.on(x, '^')
 m.plat(72, 74, 8); m.plat(77, 79, 7); m.plat(82, 84, 8)
 m.put(73, 6, 'o'); m.put(78, 5, 'o'); m.put(83, 6, 'o'); m.put(80, 4, 'F')
 m.ground(86, 100, 10)
-m.on(87, 'T'); m.on(88, 'o'); m.on(90, 'E'); m.on(97, 'E'); m.on(99, 'k')
-m.plat(92, 94, 7)
-for x in (92, 93, 94): m.put(x, 6, 'o')
+m.on(87, 'T'); m.on(91, 'E'); m.on(95, 'h'); m.on(97, 'E'); m.on(100, 'k')   # the Theehuis by the big lake
+m.plat(88, 90, 7)
+for x in (88, 89, 90): m.put(x, 6, 'o')
 m.block(101, 115, 14, 14)                                       # the big misty lake, with two pillars standing in it
 m.ground(103, 104, 10); m.on(104, 'M')
 m.ground(109, 110, 7)
@@ -62,10 +62,10 @@ m.g[12][101] = 'r'; m.g[12][106] = 'r'; m.g[12][115] = 'r'; m.put(108, 1, 'f')
 m.put(106, 4, 'o'); m.put(107, 3, 'o'); m.put(108, 4, 'o')
 m.put(112, 6, 'o'); m.put(113, 7, 'o'); m.put(114, 8, 'o')
 m.sand(116, 135, 11)                                            # second sandy plain
-m.on(117, 'k'); m.on(118, 'C'); m.on(120, 'T'); m.on(121, 'D'); m.on(123, '^'); m.on(124, '^')
+m.on(117, 'k'); m.on(118, 'C'); m.on(120, 'x'); m.on(121, 'D'); m.on(123, '^'); m.on(124, '^')
 m.plat(126, 129, 8)
 for x in (126, 127, 128, 129): m.put(x, 7, 'o')
-m.on(129, 'E'); m.on(131, 'd'); m.on(133, 'l'); m.put(133, 6, 'F')
+m.on(127, 'x'); m.on(129, 'E'); m.on(131, 'd'); m.on(133, 'l'); m.put(133, 6, 'F')
 m.ground(136, 137, 10); m.ground(138, 139, 9); m.ground(140, 151, 8)
 for x in (141, 142, 143): m.on(x, 'o')
 m.on(145, 'T'); m.on(147, 'G'); m.on(150, 'T')
@@ -159,7 +159,8 @@ out = '''#pragma once
 //   E  walking enemy F  flying enemy        C  checkpoint
 //   P  player start  G  goal star           f  fog hangs around this column
 //   Scenery: T tree, S shed / cabin, b sheep, H name sign, t tobacco plant, R stockfish rack,
-//            D deer, l fallen log, d dead tree, k birch, c j cottages, p power pole, U old bus,
+//            D deer, l fallen log, d dead tree, k birch, x pine on stilt roots, h the Theehuis,
+//            c j cottages, p power pole, U old bus,
 //            r reeds and B moored boat (place those two in water)
 // Regenerate with tools/make_level.py, or just edit the rows by hand
 // (all rows of a level must have the same length).
