@@ -17,6 +17,8 @@
   #padL { left: 18px; } #padR { right: 18px; }
   .pad button { width: 72px; height: 72px; border-radius: 50%; border: 4px solid #2b1b3f;
                 background: rgba(255, 255, 255, .55); color: #2b1b3f; font: 900 26px inherit; padding: 0; touch-action: none; }
+  .pad { align-items: flex-end; } .pad .col { display: flex; flex-direction: column; gap: 10px; }
+  .pad .col button { width: 60px; height: 52px; border-radius: 18px; } .pad button.jump { font-size: 16px; }
   .pad button.on { background: rgba(255, 212, 71, .9); }
   @media (pointer: coarse) { .pad { display: flex; } }
 </style>
@@ -24,11 +26,15 @@
 <body>
 <canvas id="canvas"></canvas>
 <div id="loading">Loading…</div>
-<div class="pad" id="padL"><button data-b="0">◀</button><button data-b="1">▶</button></div>
-<div class="pad" id="padR"><button data-b="3">✊</button><button data-b="2">▲</button></div>
+<div class="pad" id="padL"><button data-b="0">◀</button><div class="col"><button data-b="5">▲</button><button data-b="6">▼</button></div><button data-b="1">▶</button></div>
+<div class="pad" id="padR"><button data-b="3">✊</button><button data-b="2" class="jump">JUMP</button></div>
 <script>
   var Module = {
-    onRuntimeInitialized: function () { document.getElementById('loading').remove(); }
+    onRuntimeInitialized: function () {
+      document.getElementById('loading').remove();
+      var m = /^#level(\d)$/.exec(location.hash);   // e.g. index.html#level2 starts in level 2
+      if (m) Module._emma_goto_level(+m[1]);
+    }
   };
   function press(id, down) { if (Module._emma_button) Module._emma_button(id, down ? 1 : 0); }
   document.querySelectorAll('.pad button').forEach(function (b) {

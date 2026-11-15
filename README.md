@@ -8,11 +8,19 @@ Emma has no neck, arms or legs: her head, hands and feet float freely.
 | Action | Keys | Touch |
 | --- | --- | --- |
 | Move | Arrow keys or A / D | ◀ ▶ |
-| Jump (hold while falling to glide) | Space, Up, W or Z | ▲ |
+| Jump (hold while falling to glide) | Space, Z, Up or W | JUMP |
+| Climb a liana | Up / Down (or W / S) | ▲ ▼ |
+| Leap off a liana | Space or Z, with a direction | JUMP |
 | Punch (flying fist) | X, J or K | ✊ |
+| Pick a level | 1 or 2 | |
 
-Collect orbs, bounce on mushrooms, stomp or punch the grumpy critters, and reach the golden star.
-Flags are checkpoints and refill your hearts.
+Collect orbs, stomp or punch the enemies, and reach the golden star. Flags are checkpoints and refill your hearts.
+
+**Level 1, Heidestein.** Heath and pine forest: purple heather, pines, wolves, a schaapskooi with sheep, mushrooms to bounce on and a drifting cloud.
+
+**Level 2, Viñales.** A climb up and to the right over red earth and mogote hills: lianas to climb, floating fruit to ride (lifts and a ferry), a conga drum to bounce on, crabs and beetles. Jump at a liana to grab it.
+
+Add `#level2` to the address (for example `.../index.html#level2`) to start in level 2.
 
 ## Publish on GitHub Pages
 
@@ -40,17 +48,19 @@ The page has to be served over HTTP; opening `docs/index.html` straight from dis
 | Path | What it is |
 | --- | --- |
 | `src/main.cpp` | Main loop (fixed 120 Hz physics step) and keyboard / touch input |
-| `src/game.hpp`, `src/game.cpp` | Game rules: player physics, fist, enemies, pickups, camera. Tuning constants are at the top of `game.hpp` |
-| `src/render.cpp` | All drawing. The art is procedural vector shapes, so there are no image files |
+| `src/game.hpp`, `src/game.cpp` | Game rules: player physics, lianas, platforms, fist, enemies, pickups, camera. Tuning constants are at the top of `game.hpp` |
+| `src/world.cpp` | Sky, background scenery, terrain and level scenery, with the colours for each level's theme |
+| `src/actors.cpp` | Emma, enemies, platforms, lianas and pickups |
+| `src/render.cpp`, `src/draw.hpp` | Frame assembly, HUD, and shared drawing declarations |
 | `src/gfx.hpp`, `src/gfx.cpp` | Thin C++ wrapper around the browser's Canvas 2D API |
-| `src/level.hpp` | The level as an ASCII map (legend at the top of the file) |
-| `tools/make_level.py` | Optional script that generated `level.hpp` |
+| `src/level.hpp` | Both levels as ASCII maps (legend at the top of the file) |
+| `tools/make_level.py` | Script that generates `level.hpp` |
 | `web/index.html` | Page template, copied into `docs/` by the build |
 | `docs/` | Build output served by GitHub Pages |
 
-## Edit the level
+The art is procedural vector shapes, so there are no image files.
 
-Open `src/level.hpp` and change the characters. Each one is a 48-pixel tile:
-`#` ground, `=` plank, `^` thorns, `o` orb, `M` mushroom, `~` cloud platform,
-`E` walking enemy, `F` flying enemy, `C` checkpoint, `P` player start, `G` goal.
-Keep every row the same length, then run `./build.sh`.
+## Edit the levels
+
+Open `src/level.hpp` and change the characters; the legend is at the top of the file. Each character is a 48-pixel tile.
+Keep every row of a level the same length, then run `./build.sh`. (Running `tools/make_level.py` overwrites hand edits.)

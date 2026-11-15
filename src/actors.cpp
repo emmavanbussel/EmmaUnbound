@@ -1,0 +1,444 @@
+// Things that move or can be touched: bouncers, platforms, lianas, pickups, enemies, the fist and Emma.
+#include "draw.hpp"
+#include <algorithm>
+#include <cmath>
+
+uint32_t hash2(int x, int y) {
+    uint32_t h = uint32_t(x) * 374761393u + uint32_t(y) * 668265263u;
+    h = (h ^ (h >> 13)) * 1274126177u;
+    return h ^ (h >> 16);
+}
+
+void starPath(float cx, float cy, float R, float r, float rot, int n) {
+    g_path();
+    for (int i = 0; i < n * 2; i++) {
+        float a = rot + i * PI / n - PI / 2, rad = (i % 2 == 0) ? R : r;
+        float x = cx + std::cos(a) * rad, y = cy + std::sin(a) * rad;
+        if (i == 0) g_move(x, y); else g_line(x, y);
+    }
+    g_close();
+}
+
+void heartPath(float cx, float cy, float s) {
+    g_path();
+    g_move(cx, cy + s * 0.95f);
+    g_cubic(cx - s * 1.7f, cy - s * 0.2f, cx - s * 0.75f, cy - s * 1.4f, cx, cy - s * 0.45f);
+    g_cubic(cx + s * 0.75f, cy - s * 1.4f, cx + s * 1.7f, cy - s * 0.2f, cx, cy + s * 0.95f);
+    g_close();
+}
+
+// ------------------------------------------------------------ objects
+
+void drawBouncer(const Game& g, const Bouncer& m) {
+    float k = m.bounceT > 0 ? std::sin(m.bounceT / 0.4f * PI) * 0.3f : 0;
+    g_save(); g_translate(m.x, m.y); g_scale(1 + k, 1 - k);
+    g_stroke(INK, 3);
+    if (g.level == 0) {  // red forest mushroom
+        g_fill(0xfff1d6); g_rrect(-10, -24, 20, 28, 7, BOTH);
+        g_path(); g_move(-28, -18); g_cubic(-28, -50, 28, -50, 28, -18); g_quad(0, -8, -28, -18); g_close();
+        g_lin(0, -44, 0, -12, 0xff6b81, 0xe8334f); g_paint(BOTH);
+        g_fill(0xffffff);
+        g_circle(-13, -28, 5, FILL); g_circle(4, -34, 6, FILL); g_circle(17, -24, 4, FILL);
+    } else {  // conga drum
+        g_path(); g_move(-21, -37); g_line(21, -37); g_quad(27, -18, 17, 2); g_line(-17, 2); g_quad(-27, -18, -21, -37); g_close();
+        g_lin(-24, 0, 24, 0, 0xff9a3d, 0xd24a1f); g_paint(BOTH);
+        g_stroke(0xffe08a, 4);
+        g_path(); g_move(-23, -25); g_quad(0, -20, 23, -25); g_move(-21, -8); g_quad(0, -3, 21, -8); g_paint(STROKE);
+        g_stroke(INK, 1.6);
+        g_path(); g_move(-23, -27.5); g_quad(0, -22.5, 23, -27.5); g_move(-22, -22.5); g_quad(0, -17.5, 22, -22.5);
+        g_move(-21, -10.5); g_quad(0, -5.5, 21, -10.5); g_move(-20, -5.5); g_quad(0, -0.5, 20, -5.5); g_paint(STROKE);
+        g_stroke(INK, 3); g_fill(0xfff1d6); g_ellipse(0, -38, 22, 6.5, 0, BOTH);
+        g_fill(0xf0d9b0); g_ellipse(0, -38, 11, 3, 0, FILL);
+    }
+    g_restore();
+}
+
+static void drawCloudPlatform(const Mover& m, float t) {
+    g_save(); g_translate(m.x, m.y + std::sin(t * 2.2f) * 1.5f);
+    float hw = m.w / 2;
+    g_stroke(INK, 3.5);
+    g_fill(0xcfe6ff);
+    g_path();
+    g_move(-hw + 10, 0); g_line(hw - 10, 0);
+    g_quad(hw + 6, 2, hw, 14);
+    g_quad(hw - 4, 30, hw - 26, 24);
+    g_quad(hw - 44, 40, 0 + 8, 28);
+    g_quad(-14, 42, -hw + 30, 26);
+    g_quad(-hw - 2, 30, -hw, 14);
+    g_quad(-hw - 6, 2, -hw + 10, 0);
+    g_close(); g_paint(BOTH);
+    g_fill(0xffffff); g_rrect(-hw + 6, 3, m.w - 12, 11, 5.5, FILL);
+    g_stroke(INK, 2.5);
+    g_path(); g_move(-16, 17); g_quad(-11, 21, -6, 17); g_move(6, 17); g_quad(11, 21, 16, 17); g_paint(STROKE);
+    g_alpha(0.5); g_fill(0xff9dbb); g_circle(-22, 21, 4, FILL); g_circle(22, 21, 4, FILL); g_alpha(1);
+    g_restore();
+}
+
+// A big floating fruit you can ride. Its leaves flap like little wings.
+static void drawFruitPlatform(const Mover& m, float t, int index) {
+    static const int skins[][3] = {{0xffe05a, 0xff7a2e, 0xff5d3d}, {0xd3f06a, 0x5fb83a, 0xff8fa8}, {0xffa3c0, 0xe0447a, 0xffe05a}};
+    const int* c = skins[index % 3];
+    float hw = m.w / 2, flap = std::sin(t * 11 + index * 2) * 0.4f;
+    g_save(); g_translate(m.x, m.y);
+    for (int side = -1; side <= 1; side += 2) {
+        g_save(); g_translate(side * (hw - 10), 12); g_scale(side, 1); g_rotate(-0.55f + flap);
+        g_path(); g_move(0, 0); g_quad(20, -20, 44, -6); g_quad(22, 10, 0, 0); g_close();
+        g_fill(0x62d86f); g_stroke(INK, 3); g_paint(BOTH);
+        g_stroke(0x2f9a4a, 2); g_path(); g_move(4, -1); g_line(34, -6); g_paint(STROKE);
+        g_restore();
+    }
+    g_lin(0, 0, 0, 62, c[0], c[1]); g_stroke(INK, 3.5);
+    g_path(); g_move(-hw + 8, 6);
+    g_quad(-hw + 14, -1, -hw + 30, -1); g_line(hw - 30, -1); g_quad(hw - 14, -1, hw - 8, 6);
+    g_cubic(hw + 6, 30, hw - 16, 62, 0, 62);
+    g_cubic(-hw + 16, 62, -hw - 6, 30, -hw + 8, 6);
+    g_close(); g_paint(BOTH);
+    g_alpha(0.5); g_fill(0xffffff); g_ellipse(-hw * 0.45f, 14, 13, 6, -0.35, FILL); g_alpha(1);
+    g_alpha(0.45); g_fill(c[2]); g_circle(-20, 36, 6, FILL); g_circle(20, 36, 6, FILL); g_alpha(1);
+    g_fill(INK); g_ellipse(-9, 28, 2.8, 4, 0, FILL); g_ellipse(9, 28, 2.8, 4, 0, FILL);
+    g_stroke(INK, 2.5); g_path(); g_move(-6, 37); g_quad(0, 43, 6, 37); g_paint(STROKE);
+    g_restore();
+}
+
+void drawMover(const Game& g, const Mover& m, int index) {
+    if (g.level == 0) drawCloudPlatform(m, g.time); else drawFruitPlatform(m, g.time, index);
+}
+
+void drawLiana(const Game& g, const Liana& l) {
+    float t = g.time;
+    auto trace = [&]() {
+        g_path(); g_move(l.x, l.y0 - 30);
+        for (float y = l.y0 - 14; y < l.y1; y += 16) g_line(l.x + lianaSway(l, y, t), y);
+        g_line(l.x + lianaSway(l, l.y1, t), l.y1);
+    };
+    g_stroke(INK, 9); trace(); g_paint(STROKE);
+    g_stroke(0x4fae3c, 5); g_paint(STROKE);
+    g_stroke(0x9be86a, 1.6); g_paint(STROKE);
+    int i = 0;
+    for (float y = l.y0 + 8; y < l.y1 - 10; y += 38, i++) {
+        float x = l.x + lianaSway(l, y, t), side = i % 2 ? 1.f : -1.f;
+        g_save(); g_translate(x, y); g_rotate(side * (0.9f + std::sin(t * 2 + i) * 0.12f));
+        g_fill(i % 3 ? 0x6fdc55 : 0x43c463); g_stroke(INK, 2.2);
+        g_path(); g_move(0, 0); g_quad(8, -9, 0, -22); g_quad(-8, -9, 0, 0); g_close(); g_paint(BOTH);
+        g_restore();
+    }
+    float ex = l.x + lianaSway(l, l.y1, t);
+    g_fill(0x6fdc55); g_stroke(INK, 2.5); g_circle(ex, l.y1 + 3, 5, BOTH);
+}
+
+void drawCheckpoint(const Checkpoint& c, float t) {
+    g_save(); g_translate(c.x, c.y);
+    if (c.active) { g_rad(20, -62, 60, 0xffa3c4, 0.6, 0xffa3c4, 0); g_circle(20, -62, 60, FILL); }
+    g_stroke(INK, 3);
+    g_fill(0xc98845); g_rrect(-4, -80, 8, 82, 4, BOTH);
+    g_fill(0xffd447); g_circle(0, -84, 6.5, BOTH);
+    float w1 = c.active ? std::sin(t * 6) * 4 : 0, w2 = c.active ? std::sin(t * 6 + 1.5f) * 4 : 6;
+    g_path(); g_move(4, -76);
+    g_quad(22, -80 + w1, 46, -66 + w2);
+    g_quad(22, -58 + w1, 4, -50);
+    g_close();
+    g_fill(c.active ? 0xff5d8f : 0xb9c0cc); g_paint(BOTH);
+    if (c.active) { g_fill(0xfff27a); starPath(19, -65 + w1 * 0.5f, 7.5, 3.4, 0); g_paint(FILL); }
+    g_restore();
+}
+
+void drawGoal(const Game& g) {
+    float t = g.time, x = g.goalX, y = g.goalY;
+    g_stroke(INK, 3.5);
+    g_fill(0xa9a4c4); g_rrect(x - 34, y - 14, 68, 18, 6, BOTH);
+    g_fill(0xc4c0dc); g_rrect(x - 23, y - 28, 46, 16, 6, BOTH);
+    float sy = y - 86 + std::sin(t * 2.4f) * 6;
+    g_rad(x, sy, 110, 0xfff27a, 0.75, 0xfff27a, 0); g_circle(x, sy, 110, FILL);
+    g_save(); g_translate(x, sy); g_rotate(t * 0.5f); g_alpha(0.35); g_fill(0xffffff);
+    for (int i = 0; i < 8; i++) { g_rotate(PI / 4); g_path(); g_move(0, 0); g_line(-9, -78); g_line(9, -78); g_close(); g_paint(FILL); }
+    g_alpha(1); g_restore();
+    float rot = std::sin(t * 1.6f) * 0.18f, pulse = 1 + std::sin(t * 4) * 0.05f;
+    starPath(x, sy, 34 * pulse, 16.5f * pulse, rot);
+    g_lin(0, sy - 34, 0, sy + 30, 0xfff9a8, 0xffb21f); g_stroke(INK, 4); g_paint(BOTH);
+    g_fill(INK); g_ellipse(x - 6, sy + 1, 2.6, 4, 0, FILL); g_ellipse(x + 6, sy + 1, 2.6, 4, 0, FILL);
+    g_stroke(INK, 2.5); g_path(); g_move(x - 5, sy + 9); g_quad(x, sy + 14, x + 5, sy + 9); g_paint(STROKE);
+}
+
+void drawOrb(float x, float y, float t, float phase) {
+    y += std::sin(t * 3 + phase) * 4;
+    g_rad(x, y, 24, 0xfff2a0, 0.7, 0xfff2a0, 0); g_circle(x, y, 24, FILL);
+    g_lin(0, y - 10, 0, y + 10, 0xfffbd0, 0xffb21f);
+    g_stroke(0xa85b00, 2.5); g_circle(x, y, 9.5, BOTH);
+    g_fill(0xffffff); g_circle(x - 3.2, y - 3.5, 2.8, FILL);
+    float tw = 0.5f + 0.5f * std::sin(t * 5 + phase * 3);
+    g_alpha(tw); starPath(x + 11, y - 11, 6 * tw + 2, 1.6f, t, 4); g_paint(FILL); g_alpha(1);
+}
+
+static void angryFace(float ex, float ey, float s) {
+    g_fill(0xffffff); g_stroke(INK, 2);
+    g_ellipse(ex, ey, 5 * s, 6 * s, 0, BOTH); g_ellipse(ex + 10 * s, ey, 4.5 * s, 5.5 * s, 0, BOTH);
+    g_fill(INK); g_circle(ex + 1.8 * s, ey + 1, 2.3 * s, FILL); g_circle(ex + 11.5 * s, ey + 1, 2.1 * s, FILL);
+    g_stroke(INK, 3.5 * s);
+    g_path(); g_move(ex - 6 * s, ey - 9 * s); g_line(ex + 4 * s, ey - 4.5 * s);
+    g_move(ex + 16 * s, ey - 8.5 * s); g_line(ex + 7.5 * s, ey - 4.5 * s); g_paint(STROKE);
+}
+
+
+static void drawWolf(const Enemy& e) {
+    float w = std::sin(e.t * 9), bobY = -std::fabs(w) * 1.5f;
+    const int FUR = 0x9aa0b4, DARK = 0x6d7389, LIGHT = 0xe4e7f0;
+    g_translate(-4, 0);
+    g_stroke(INK, 3);
+    // tail
+    g_fill(FUR);
+    g_path(); g_move(-16, -25 + bobY); g_quad(-38, -38 + w * 3, -37, -17 + w * 2); g_quad(-28, -11, -15, -17 + bobY); g_close(); g_paint(BOTH);
+    // far legs
+    g_fill(DARK);
+    g_rrect(-14 + w * 5, -13, 7, 15, 3, BOTH); g_rrect(8 - w * 5, -13, 7, 15, 3, BOTH);
+    // body
+    g_lin(0, -36, 0, -10, 0xb4bacb, 0x7f869b); g_ellipse(0, -23 + bobY, 20, 12.5, 0, BOTH);
+    g_fill(LIGHT); g_ellipse(3, -17 + bobY, 12, 4.5, 0, FILL);
+    // near legs
+    g_fill(FUR);
+    g_rrect(-9 - w * 5, -13, 7, 15, 3, BOTH); g_rrect(13 + w * 5, -13, 7, 15, 3, BOTH);
+    // head
+    float hy = bobY * 1.5f;
+    g_fill(FUR);
+    g_path(); g_move(9, -42 + hy); g_line(11, -57 + hy); g_line(19, -45 + hy); g_close(); g_paint(BOTH);
+    g_path(); g_move(18, -44 + hy); g_line(24, -57 + hy); g_line(28, -42 + hy); g_close(); g_paint(BOTH);
+    g_circle(19, -35 + hy, 11.5, BOTH);
+    g_fill(LIGHT);
+    g_path(); g_move(24, -40 + hy); g_line(41, -35 + hy); g_quad(43, -29 + hy, 37, -27 + hy); g_line(21, -25 + hy); g_close(); g_paint(BOTH);
+    g_fill(INK); g_circle(40.5, -33.5 + hy, 2.8, FILL);
+    g_fill(0xffffff); g_stroke(INK, 1.6);
+    g_path(); g_move(29, -27 + hy); g_line(31, -22.5 + hy); g_line(33, -27 + hy); g_close(); g_paint(BOTH);
+    g_fill(0xffe45c); g_stroke(INK, 1.8); g_ellipse(21, -37 + hy, 3.4, 3.8, 0, BOTH);
+    g_fill(INK); g_circle(22, -36.5 + hy, 1.6, FILL);
+    g_stroke(INK, 3); g_path(); g_move(15, -43 + hy); g_line(25, -39.5 + hy); g_paint(STROKE);
+}
+
+static void drawCrab(const Enemy& e) {
+    float w = std::sin(e.t * 12), look = e.vx > 0 ? 1.4f : -1.4f;
+    g_stroke(INK, 3);
+    // legs
+    for (int side = -1; side <= 1; side += 2)
+        for (int i = 0; i < 3; i++) {
+            float k = (i % 2 ? w : -w) * 2.5f;
+            g_stroke(INK, 6); g_path(); g_move(side * (10 + i * 3), -10); g_quad(side * (20 + i * 3), -12, side * (19 + i * 4) + k, -1); g_paint(STROKE);
+            g_stroke(0xf0503c, 2.6); g_paint(STROKE);
+        }
+    g_stroke(INK, 3);
+    // claws
+    for (int side = -1; side <= 1; side += 2) {
+        float cy = -33 + (side > 0 ? w : -w) * 2.5f;
+        g_stroke(INK, 7); g_path(); g_move(side * 15, -18); g_line(side * 24, cy + 6); g_paint(STROKE);
+        g_stroke(0xf0503c, 3); g_paint(STROKE);
+        g_stroke(INK, 3); g_lin(0, cy - 8, 0, cy + 8, 0xff8a6a, 0xe0402e); g_circle(side * 26, cy, 8.5, BOTH);
+        g_stroke(INK, 2.5); g_path(); g_move(side * 26, cy + 1); g_line(side * 30, cy - 8); g_paint(STROKE);
+    }
+    // shell
+    g_stroke(INK, 3);
+    g_lin(0, -28, 0, -4, 0xff8a6a, 0xd93a2b); g_ellipse(0, -15 + std::fabs(w), 19, 12.5, 0, BOTH);
+    g_alpha(0.35); g_fill(0xffffff); g_ellipse(-8, -21, 6, 3, -0.4, FILL); g_alpha(1);
+    // eyes on stalks
+    for (int side = -1; side <= 1; side += 2) {
+        g_stroke(INK, 6); g_path(); g_move(side * 6, -25); g_line(side * 7, -33); g_paint(STROKE);
+        g_stroke(0xf0503c, 2.6); g_paint(STROKE);
+        g_stroke(INK, 2); g_fill(0xffffff); g_circle(side * 7, -36, 5.2, BOTH);
+        g_fill(INK); g_circle(side * 7 + look, -35.5, 2.2, FILL);
+    }
+    g_stroke(INK, 3); g_path(); g_move(-13, -43); g_line(-3, -39); g_move(13, -43); g_line(3, -39); g_paint(STROKE);
+    g_stroke(INK, 2.2); g_path(); g_move(-5, -10); g_quad(0, -13, 5, -10); g_paint(STROKE);
+}
+
+void drawEnemy(const Game& g, const Enemy& e) {
+    g_save(); g_translate(e.x, e.y);
+    if (e.type == 0) {
+        if (g.level == 0) { g_scale(e.vx > 0 ? 1 : -1, 1); drawWolf(e); }
+        else drawCrab(e);
+    } else {  // flyer: a wasp in Heidestein, an emerald beetle in Vinales
+        bool wasp = g.level == 0;
+        g_scale(std::cos(e.t * 1.1f) > 0 ? 1 : -1, 1);
+        float flap = std::fabs(std::sin(e.t * 26));
+        g_stroke(INK, 2.5);
+        g_alpha(0.85); g_fill(0xe9f8ff);
+        g_ellipse(-8, -13, 6, 4 + 11 * flap, -0.5, BOTH); g_ellipse(2, -14, 6, 4 + 11 * flap, 0.3, BOTH);
+        g_alpha(1);
+        g_fill(INK); g_path(); g_move(-13, -3); g_line(-24, 2); g_line(-12, 5); g_close(); g_paint(BOTH);  // stinger
+        g_stroke(INK, 3);
+        if (wasp) g_lin(0, -14, 0, 14, 0xffe05a, 0xf2a81d); else g_lin(0, -14, 0, 14, 0x5fe8b8, 0x1fa37c);
+        g_ellipse(0, 0, 16, 14, 0, BOTH);
+        g_stroke(wasp ? 0x3d2a1a : 0x0d6b55, wasp ? 4 : 3);
+        g_path(); g_move(-7, -11); g_quad(-11, 0, -7, 11);
+        if (wasp) { g_move(-12.5, -6); g_quad(-15, 0, -12.5, 6); }
+        g_paint(STROKE);
+        angryFace(1, -2, 0.85f);
+    }
+    g_restore();
+}
+
+static void drawGlove(float x, float y, float r) {
+    g_fill(0xffffff); g_stroke(INK, 2.5); g_circle(x, y, r, BOTH);
+}
+
+void drawFist(const Game& g) {
+    const Fist& f = g.fist;
+    if (!f.active) return;
+    float d = f.returning ? (g.p.x > f.x ? 1.f : -1.f) : (f.vx > 0 ? 1.f : -1.f);
+    for (int i = 3; i >= 1; i--) {
+        g_alpha(0.16 * (4 - i)); g_fill(0xffffff);
+        g_circle(f.x - d * i * 11, f.y, 9 - i * 1.5f, FILL);
+    }
+    g_alpha(1);
+    g_save(); g_translate(f.x, f.y); g_scale(f.vx > 0 ? 1 : -1, 1);
+    g_fill(0xffd447); g_stroke(INK, 2.5); g_rrect(-15, -6, 9, 12, 3, BOTH);
+    drawGlove(0, 0, 10);
+    g_stroke(INK, 2); g_path(); g_move(3, -5); g_quad(6, -2, 3, 0); g_move(4, 0); g_quad(7, 3, 4, 5); g_paint(STROKE);
+    g_restore();
+}
+
+// ------------------------------------------------------------ Emma
+
+void drawEmma(const Game& g) {
+    const Player& p = g.p;
+    float t = g.time;
+    const int HAIR = 0xff4f7b, HAIR_LIGHT = 0xff86a6, SKIN = 0xffdcb8, TUNIC = 0x1ec8b6, TUNIC_DARK = 0x129c94;
+    const int SHOE = 0xffb21f, SCARF = 0xffd447;
+
+    float alpha = 1;
+    if (p.dead) alpha = std::max(0.f, 1 - p.deadT / 1.1f);
+    else if (p.invuln > 0 && std::fmod(p.invuln, 0.16f) < 0.07f) alpha = 0.35f;
+    g_save();
+    g_alpha(alpha);
+    bool climb = p.onLiana >= 0;
+    float swayX = climb ? lianaSway(g.lianas[p.onLiana], p.y - 90, t) : 0;
+    g_translate(p.x + swayX, p.y);
+    g_scale(p.dir, 1);
+    g_scale(1 + p.squash * 0.22f, 1 - p.squash * 0.22f);
+
+    bool air = !p.grounded && p.onLiana < 0, running = p.grounded && std::fabs(p.vx) > 30, win = g.state == Game::WIN;
+    float ph = p.runPhase, s = std::sin(ph), c = std::cos(ph);
+    float bob = running ? -std::fabs(s) * 3 : (air || p.onLiana >= 0 ? 0 : std::sin(t * 3) * 1.3f);
+    float by = -31 + bob;  // body centre
+
+    float f1x, f1y, f2x, f2y, h1x, h1y, h2x, h2y;  // 1 = far side, 2 = near side
+    if (climb) {  // hands reach up and grip the liana above her head
+        float a = std::sin(p.climbPhase) * 5;
+        f1x = -6; f1y = -5 + a; f2x = 5; f2y = -9 - a;
+        h1x = 0; h1y = -99 + a; h2x = 1; h2y = -90 - a;
+    } else if (running) {
+        f1x = -s * 14; f1y = -5 - std::max(0.f, -c) * 9; f2x = s * 14; f2y = -5 - std::max(0.f, c) * 9;
+        h1x = -12 + s * 12; h1y = by + 4; h2x = 12 - s * 12; h2y = by + 4;
+    } else if (air) {
+        if (p.vy < 0) { f1x = -9; f1y = -3; f2x = 6; f2y = -11; h1x = -18; h1y = by - 10; h2x = 19; h2y = by - 15; }
+        else {
+            float wig = p.gliding ? std::sin(t * 16) * 3 : 0;
+            f1x = -8 + wig; f1y = -2; f2x = 9 - wig; f2y = -5;
+            h1x = -22; h1y = by - 5 - wig; h2x = 22; h2y = by - 7 + wig;
+        }
+    } else {
+        f1x = -8; f1y = -5; f2x = 8; f2y = -5;
+        h1x = -17; h1y = by + 5 + std::sin(t * 3) * 1.5f; h2x = 17; h2y = by + 5 + std::sin(t * 3 + 1) * 1.5f;
+    }
+    if (win) { h1x = -19; h1y = by - 22 + std::sin(t * 12) * 4; h2x = 19; h2y = by - 22 + std::cos(t * 12) * 4; }
+    if (p.punchT > 0 && !climb) { h1x = -16; h1y = by; }
+
+    // When Emma is knocked out her parts fly apart (she is "unbound" after all).
+    auto begin = [&](float ox, float oy, float kx, float ky) {
+        g_save();
+        if (p.dead) {
+            float d = p.deadT;
+            g_translate(kx * 230 * d, ky * 230 * d + 520 * d * d);
+            g_translate(ox, oy); g_rotate(d * 7 * (kx >= 0 ? 1 : -1)); g_translate(-ox, -oy);
+        }
+    };
+    auto shoe = [&](float x, float y) {
+        g_fill(SHOE); g_stroke(INK, 2.8); g_ellipse(x + 3, y, 10, 6.2, 0, BOTH);
+        g_fill(0xffe08a); g_ellipse(x + 6, y - 2, 3.5, 1.8, -0.2, FILL);
+    };
+
+    begin(h1x, h1y, -1.0f, -0.7f); drawGlove(h1x, h1y, 6.8); g_restore();
+    begin(f1x, f1y, -0.7f, -0.2f); shoe(f1x, f1y); g_restore();
+
+    // body: a little bell-shaped tunic with a scarf, and nothing connecting it to head, hands or feet
+    begin(0, by, -0.2f, -0.5f);
+    {
+        float flutter = std::sin(t * 9) * 3, back = std::min(14.f, std::fabs(p.vx) * 0.04f);
+        g_fill(SCARF); g_stroke(INK, 2.5);
+        g_path(); g_move(-8, by - 14); g_quad(-16 - back, by - 16 + flutter, -22 - back, by - 8 + flutter);
+        g_quad(-14 - back * 0.5f, by - 8, -8, by - 9); g_close(); g_paint(BOTH);
+        g_path();
+        g_move(-10.5, by - 12); g_quad(0, by - 17, 10.5, by - 12);
+        g_cubic(13, by - 2, 17, by + 6, 16, by + 13);
+        g_quad(0, by + 19, -16, by + 13);
+        g_cubic(-17, by + 6, -13, by - 2, -10.5, by - 12);
+        g_close();
+        g_lin(0, by - 16, 0, by + 18, TUNIC, TUNIC_DARK); g_stroke(INK, 3); g_paint(BOTH);
+        g_alpha(alpha * 0.35f); g_fill(0xffffff); g_ellipse(-6, by - 3, 3.5, 7, 0.25, FILL); g_alpha(alpha);
+        g_fill(0xfff27a); g_stroke(INK, 1.8); starPath(3, by + 3, 6.5, 3, 0); g_paint(BOTH);
+        g_fill(SCARF); g_stroke(INK, 2.5);  // scarf wrapped round the top of the tunic
+        g_path(); g_move(-12, by - 13); g_quad(0, by - 20, 12, by - 13); g_line(12.5, by - 9);
+        g_quad(0, by - 4, -12.5, by - 9); g_close(); g_paint(BOTH);
+    }
+    g_restore();
+
+    begin(f2x, f2y, 0.7f, -0.3f); shoe(f2x, f2y); g_restore();
+
+    // head: floats above the body with a clear gap, and lags behind when she jumps or falls
+    float hx = 2, hy = -72 + bob * 1.4f + p.headOff;
+    begin(hx, hy, 0.15f, -1.5f);
+    g_translate(hx, hy);
+    g_rotate(std::clamp(std::fabs(p.vx) * 0.0003f + (air ? p.vy * 0.00012f : 0.f), -0.15f, 0.2f));
+    {
+        g_stroke(INK, 2.8);
+        if (p.gliding) {  // pigtails spin like helicopter blades
+            float sp = t * 34;
+            for (int i = 0; i < 2; i++) {
+                float w = std::fabs(std::sin(sp + i * PI / 2));
+                g_fill(i ? HAIR : HAIR_LIGHT);
+                g_ellipse(-2, -21, 7 + 25 * w, 5.5, 0, BOTH);
+            }
+            g_alpha(alpha * 0.35f); g_fill(0xffffff); g_ellipse(-2, -21, 36, 7, 0, FILL); g_alpha(alpha);
+        } else {
+            float a = 0.55f + std::fabs(p.vx) / RUN_SPEED * 0.75f + (air ? p.vy * 0.0009f : 0.f) + std::sin(t * 4) * 0.07f;
+            a = std::clamp(a, 0.1f, 2.5f);
+            for (int i = 0; i < 2; i++) {
+                g_save(); g_translate(i ? -12 : -8, i ? -4 : -11); g_rotate(a + i * 0.25f);
+                g_fill(i ? HAIR : HAIR_LIGHT);
+                g_path(); g_move(0, 0); g_cubic(10, 6, 9, 25, 0, 28); g_cubic(-9, 25, -10, 6, 0, 0); g_close(); g_paint(BOTH);
+                g_restore();
+            }
+        }
+        g_fill(HAIR); g_circle(-1.5, -1.5, 17, BOTH);
+        g_fill(SKIN); g_circle(1.5, 1.5, 13.8, BOTH);
+        // fringe
+        g_fill(HAIR);
+        g_path(); g_move(-12.5, -3);
+        g_quad(-6, -18, 8, -15); g_quad(15, -12, 16, -3);
+        g_quad(11, -9, 6, -5); g_quad(2, -10, -3, -5); g_quad(-7, -9, -12.5, -3);
+        g_close(); g_paint(BOTH);
+        g_alpha(alpha * 0.6f); g_stroke(HAIR_LIGHT, 2.5);
+        g_path(); g_move(-8, -13); g_quad(-2, -17, 5, -15); g_paint(STROKE); g_alpha(alpha);
+        // bobble holding the pigtails
+        g_fill(SCARF); g_stroke(INK, 2); g_circle(-12, -10, 3.6, BOTH);
+        // face
+        bool blink = std::fmod(t, 3.3f) < 0.11f, hurt = p.invuln > 0.9f || p.dead;
+        g_stroke(INK, 1.8);
+        if (hurt) {
+            g_stroke(INK, 2.5); g_path();
+            g_move(1, -1); g_line(6, 3); g_move(6, -1); g_line(1, 3);
+            g_move(9, -1); g_line(14, 3); g_move(14, -1); g_line(9, 3); g_paint(STROKE);
+        } else if (blink) {
+            g_stroke(INK, 2.5); g_path(); g_move(0, 1); g_line(7, 1); g_move(9, 1); g_line(15, 1); g_paint(STROKE);
+        } else {
+            g_fill(0xffffff); g_ellipse(4, 1, 4.3, 5.6, 0, BOTH); g_ellipse(11.5, 1, 3.6, 5.2, 0, BOTH);
+            g_fill(INK); g_ellipse(5.4, 1.8, 2.3, 3.2, 0, FILL); g_ellipse(12.3, 1.8, 2, 3, 0, FILL);
+            g_fill(0xffffff); g_circle(6.2, 0.4, 1, FILL); g_circle(12.9, 0.4, 0.9, FILL);
+        }
+        g_alpha(alpha * 0.55f); g_fill(0xff8fa8); g_circle(-1, 7.5, 3.4, FILL); g_alpha(alpha);
+        g_stroke(INK, 2.2);
+        if ((air && !climb) || win) { g_fill(0xb3304f); g_ellipse(8.5, 9.5, 3.2, 3.6, 0, BOTH); }  // "whee!"
+        else { g_path(); g_move(4.5, 8.5); g_quad(8.5, 12.5, 12, 8); g_paint(STROKE); }
+    }
+    g_restore();
+
+    if (!g.fist.active) { begin(h2x, h2y, 1.0f, -0.6f); drawGlove(h2x, h2y, 7.2); g_restore(); }
+    g_restore();
+    g_alpha(1);
+}
+
